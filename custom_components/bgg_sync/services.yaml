@@ -1,0 +1,39 @@
+record_play:
+  description: Record a play on BoardGameGeek
+  fields:
+    username:
+      description: BGG Username to log as
+      example: seanmccabe
+      required: true
+      selector:
+        text:
+    game_id:
+      description: The BGG ID of the game
+      example: 822
+      required: true
+      selector:
+        number:
+          mode: box
+    date:
+      description: Date of the play (YYYY-MM-DD)
+      example: "2024-01-01"
+      selector:
+        date:
+    length:
+      description: Length of the play in minutes
+      example: 45
+      selector:
+        number:
+          min: 1
+          max: 1440
+          unit_of_measurement: min
+    comments:
+      description: Comments for the play
+      example: "Fun game with the family!"
+      selector:
+        text:
+    players:
+      description: List of players and if they won
+      example: '[{"name": "Sean", "winner": true}, {"name": "Kelly", "winner": false}]'
+      selector:
+        object:

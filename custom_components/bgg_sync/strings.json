@@ -1,0 +1,34 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "BGG Sync",
+                "data": {
+                    "bgg_username": "BoardGameGeek Username",
+                    "bgg_password": "BGG Password (required for logging plays)",
+                    "bgg_api_token": "BGG API Token (Optional, for API limits)",
+                    "games": "Board Games (comma separated IDs, e.g. 822 for Carcassonne)"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error"
+        },
+        "abort": {
+            "already_configured": "Account is already configured"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "bgg_password": "BGG Password (required for logging plays)",
+                    "bgg_api_token": "BGG API Token (Optional, for API limits)",
+                    "games": "Board Games (comma separated IDs)"
+                }
+            }
+        }
+    }
+}
