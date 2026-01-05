@@ -53,7 +53,7 @@ service: bgg_sync.record_play
 data:
   username: "your_bgg_username"
   game_id: 822  # Carcassonne
-  date: "2023-10-27"
+  date: "2026-01-01"
   length: 60
   comments: "Great game!"
   players:

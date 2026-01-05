@@ -16,7 +16,7 @@ record_play:
           mode: box
     date:
       description: Date of the play (YYYY-MM-DD)
-      example: "2024-01-01"
+      example: "2026-01-01"
       selector:
         date:
     length:
