@@ -85,3 +85,14 @@ Ensure you have provided a valid **API Token**. BGG has tightened security and n
 ### Play Recording fails
 The integration uses a specialised API login method. If you change your password, you must update it in the integration options. If logs show "Login failed," ensure your credentials are correct.
 
+
+### Enable Debug Logging
+
+To help troubleshoot issues, you can enable debug logging by adding the following to your `configuration.yaml`:
+
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.bgg_sync: debug
+```
