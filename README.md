@@ -25,7 +25,7 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
     *   Go to [BGG Applications](https://boardgamegeek.com/applications).
     *   Register a new application (e.g., "Home Assistant").
     *   Click "Tokens" and generate a new token.
-    *   Paste this token into the configuration dialog.
+    *   Paste this token into the configuration dialogue.
 5.  **Password (Required for Recording Plays)**:
     *   Enter your BGG password if you intend to use the `record_play` service.
 6.  **Tracked Games**:
@@ -83,4 +83,5 @@ data:
 Ensure you have provided a valid **API Token**. BGG has tightened security and now requires this token for most XML API requests. Check your configuration via "Configure" in the Integrations page.
 
 ### Play Recording fails
-The integration uses a specialized API login method. If you change your password, you must update it in the integration options. If logs show "Login failed," ensure your credentials are correct.
+The integration uses a specialised API login method. If you change your password, you must update it in the integration options. If logs show "Login failed," ensure your credentials are correct.
+
