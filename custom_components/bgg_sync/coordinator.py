@@ -127,6 +127,42 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     root = ET.fromstring(resp.content)
                     data["game_plays"][game_id] = int(root.get("total", 0))
 
+            # 4. Fetch Rich Game Details (One Batch Request)
+            if self.game_ids:
+                ids_str = ",".join(map(str, self.game_ids))
+                thing_url = f"{BASE_URL}/thing?id={ids_str}&stats=1"
+                resp = await self.hass.async_add_executor_job(
+                    lambda: self.session.get(thing_url, headers=self.headers, timeout=10)
+                )
+                _LOGGER.debug("Thing API response: %s", resp.status_code)
+                if resp.status_code == 200:
+                    root = ET.fromstring(resp.content)
+                    data["game_details"] = {}
+                    for item in root.findall("item"):
+                        try:
+                            g_id = int(item.get("id"))
+                            # Safe retrieval of values
+                            rank_val = "Not Ranked"
+                            ranks = item.find("statistics/ratings/ranks")
+                            if ranks:
+                                for rank in ranks.findall("rank"):
+                                    if rank.get("name") == "boardgame":
+                                        rank_val = rank.get("value")
+                                        break
+                                        
+                            data["game_details"][g_id] = {
+                                "image": item.findtext("image"),
+                                "year": item.findtext("yearpublished"),
+                                "min_players": item.findtext("minplayers"),
+                                "max_players": item.findtext("maxplayers"),
+                                "playing_time": item.findtext("playingtime"),
+                                "rank": rank_val,
+                                "weight": item.findtext("statistics/ratings/averageweight"),
+                                "rating": item.findtext("statistics/ratings/average"),
+                            }
+                        except Exception as e:
+                            _LOGGER.warning("Error parsing game details for ID %s: %s", item.get("id"), e)
+
             return data
 
         except Exception as err:

@@ -7,7 +7,19 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, CONF_BGG_USERNAME, CONF_BGG_PASSWORD, SERVICE_RECORD_PLAY, CONF_GAMES, CONF_API_TOKEN
+from .const import (
+    DOMAIN, 
+    CONF_BGG_USERNAME, 
+    CONF_BGG_PASSWORD, 
+    SERVICE_RECORD_PLAY, 
+    SERVICE_TRACK_GAME,
+    CONF_GAMES, 
+    CONF_API_TOKEN,
+    CONF_GAME_DATA,
+    CONF_NFC_TAG,
+    CONF_MUSIC,
+    CONF_CUSTOM_IMAGE
+)
 from .coordinator import BggDataUpdateCoordinator
 import requests
 
@@ -24,10 +36,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     username = conf[CONF_BGG_USERNAME]
     password = conf.get(CONF_BGG_PASSWORD)
     api_token = conf.get(CONF_API_TOKEN)
-    game_ids_raw = conf.get(CONF_GAMES, "")
-    game_ids = [int(x.strip()) for x in game_ids_raw.split(",") if x.strip().isdigit()]
     
-    coordinator = BggDataUpdateCoordinator(hass, username, password, api_token, game_ids)
+    # 1. Parse legacy CSV list
+    game_ids_from_csv = []
+    game_ids_raw = conf.get(CONF_GAMES, "")
+    for x in game_ids_raw.split(","):
+        if x.strip().isdigit():
+            game_ids_from_csv.append(int(x.strip()))
+
+    # 2. Parse new dict
+    game_data = conf.get(CONF_GAME_DATA, {})
+    
+    # 3. Merge: ensure all CSV games are in the dict keys
+    # We pass ONLY the list of IDs to the coordinator for fetching
+    # The sensor platform reads the full dict for metadata
+    all_game_ids = list(set(game_ids_from_csv + [int(k) for k in game_data.keys()]))
+    
+    coordinator = BggDataUpdateCoordinator(hass, username, password, api_token, all_game_ids)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})
@@ -43,42 +68,88 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Set up services for BGG Sync."""
-    if hass.services.has_service(DOMAIN, SERVICE_RECORD_PLAY):
-        return
-
-    async def async_record_play(call):
-        """Record a play on BGG."""
-        username = call.data["username"]
-        game_id = call.data["game_id"]
-        # Find config entry for this username to get password
-        entry = None
-        for config_entry in hass.config_entries.async_entries(DOMAIN):
-            if config_entry.data.get(CONF_BGG_USERNAME) == username:
-                entry = config_entry
-                break
+    
+    # RECORD PLAY SERVICE
+    if not hass.services.has_service(DOMAIN, SERVICE_RECORD_PLAY):
+        async def async_record_play(call):
+            """Record a play on BGG."""
+            username = call.data["username"]
+            game_id = call.data["game_id"]
+            # Find config entry for this username to get password
+            entry = None
+            for config_entry in hass.config_entries.async_entries(DOMAIN):
+                if config_entry.data.get(CONF_BGG_USERNAME) == username:
+                    entry = config_entry
+                    break
+            
+            if not entry:
+                _LOGGER.error("No BGG account configured for %s", username)
+                return
+    
+            password = entry.data.get(CONF_BGG_PASSWORD)
+            if not password:
+                _LOGGER.error("No password configured for %s, cannot log play", username)
+                return
+    
+            await hass.async_add_executor_job(
+                record_play_on_bgg,
+                username,
+                password,
+                game_id,
+                call.data.get("date"),
+                call.data.get("length"),
+                call.data.get("comments"),
+                call.data.get("players"),
+            )
         
-        if not entry:
-            _LOGGER.error("No BGG account configured for %s", username)
-            return
+        hass.services.async_register(DOMAIN, SERVICE_RECORD_PLAY, async_record_play)
 
-        password = entry.data.get(CONF_BGG_PASSWORD)
-        if not password:
-            _LOGGER.error("No password configured for %s, cannot log play", username)
-            return
+    # TRACK GAME SERVICE
+    if not hass.services.has_service(DOMAIN, SERVICE_TRACK_GAME):
+        async def async_track_game(call):
+            """Add a game to be tracked."""
+            bgg_id = call.data["bgg_id"]
+            # Handle optional args
+            nfc = call.data.get("nfc_tag")
+            music = call.data.get("music") or call.data.get("search_spotify")
+            custom_image = call.data.get("custom_image")
+            
+            # Find entry (default to first if not specified)
+            # Support optional 'username' to target specific instance
+            target_username = call.data.get("username")
+            entry = None
+            entries = hass.config_entries.async_entries(DOMAIN)
+            
+            if target_username:
+                for e in entries:
+                    if e.data.get(CONF_BGG_USERNAME) == target_username:
+                        entry = e
+                        break
+            elif entries:
+                entry = entries[0]
+                
+            if not entry:
+                _LOGGER.error("No BGG Sync configuration found to track game.")
+                return
 
-        # Perform the actual POST. This should be in an executor job.
-        await hass.async_add_executor_job(
-            record_play_on_bgg,
-            username,
-            password,
-            game_id,
-            call.data.get("date"),
-            call.data.get("length"),
-            call.data.get("comments"),
-            call.data.get("players"),
-        )
-
-    hass.services.async_register(DOMAIN, SERVICE_RECORD_PLAY, async_record_play)
+            # Update Options
+            new_options = dict(entry.options)
+            current_data = new_options.get(CONF_GAME_DATA, {}).copy()
+            
+            # Add/Update the game entry
+            metadata = current_data.get(str(bgg_id), {}) # Keys are strings in JSON/Config
+            # If it was an empty dict from previous legacy import, it might be there
+            
+            if nfc: metadata[CONF_NFC_TAG] = nfc
+            if music: metadata[CONF_MUSIC] = music
+            if custom_image: metadata[CONF_CUSTOM_IMAGE] = custom_image
+            
+            current_data[str(bgg_id)] = metadata
+            new_options[CONF_GAME_DATA] = current_data
+            
+            hass.config_entries.async_update_entry(entry, options=new_options)
+            
+        hass.services.async_register(DOMAIN, SERVICE_TRACK_GAME, async_track_game)
 
 def record_play_on_bgg(username, password, game_id, date, length, comments, players):
     """BGG play recording logic using requests."""

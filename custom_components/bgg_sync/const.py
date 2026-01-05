@@ -14,3 +14,15 @@ ATTR_TOTAL_PLAYS = "total_plays"
 ATTR_TOTAL_COLLECTION = "total_collection"
 
 SERVICE_RECORD_PLAY = "record_play"
+SERVICE_TRACK_GAME = "track_game"
+
+# Game Metadata
+CONF_NFC_TAG = "nfc_tag"
+CONF_MUSIC = "music"
+CONF_CUSTOM_IMAGE = "custom_image"
+CONF_GAME_DATA = "game_data" # To store the rich metadata dict
+
+ATTR_GAME_RANK = "rank"
+ATTR_GAME_YEAR = "year"
+ATTR_GAME_WEIGHT = "weight"
+ATTR_GAME_PLAYING_TIME = "playing_time"
