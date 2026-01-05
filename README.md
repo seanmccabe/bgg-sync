@@ -9,7 +9,7 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
 *   **Play Recording**: Includes a `bgg_sync.record_play` service to log plays to your BGG account (bypassing the read-only XML API restrictions).
 *   **Smart Polling**: Updates every 30 minutes to respect BGG's rate limits and server load.
 *   **Multi-User**: Supports tracking multiple BGG accounts.
-*   **Game Tracking**: Option to track specific games (by ID) to get dedicated sensors for their play counts.
+*   **Game Tracking**: Option to track specific games (by ID) to get dedicated sensors with rich metadata (Box Art, Rank, Year).
 
 ## Installation
 
@@ -28,8 +28,6 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
     *   Paste this token into the configuration dialogue.
 5.  **Password (Required for Recording Plays)**:
     *   Enter your BGG password if you intend to use the `record_play` service.
-6.  **Tracked Games**:
-    *   Enter a comma-separated list of BGG Game IDs (e.g., `822` for Carcassonne) to create specific sensors for them.
 
 ## Sensors
 
@@ -38,9 +36,35 @@ The integration creates the following sensors:
 *   `sensor.bgg_sync_{username}_plays`: Total number of plays recorded.
     *   *Attributes*: `last_play_game`, `last_play_date`, `last_play_comment`, `last_play_id`.
 *   `sensor.bgg_sync_{username}_collection`: Total number of games in your collection (owned).
-*   `sensor.bgg_sync_{username}_plays_{game_id}`: Play count for specific tracked games.
+*   `bgg_game_{id}`: A rich sensor for a specific tracked game.
+    *   **State**: Total Plays.
+    *   **Entity Picture**: The authentic game box art from BGG (or your custom override).
+    *   **Attributes**: `rank`, `year`, `weight` (complexity), `playing_time`, `bgg_url`, plus any custom `nfc_tag` or `music` you defined.
 
 ## Services
+
+### `bgg_sync.track_game`
+
+Dynamically adds a game to your tracked list without restarting Home Assistant.
+
+**YAML Example:**
+
+```yaml
+service: bgg_sync.track_game
+data:
+  bgg_id: 822
+  nfc_tag: "04-14-98-B2-84-2A-81"
+  music: "spotify:playlist:3eFSbK6WDyledAmEvtmb3t"
+  custom_image: "/local/boardgames/carcassonne.webp"
+```
+
+**Arguments:**
+
+*   `bgg_id` (Required): The BoardGameGeek ID of the game.
+*   `nfc_tag` (Optional): A clean tag ID to associate with this game (useful for automations).
+*   `music` (Optional): A Spotify URI, URL, or search term for background music.
+*   `custom_image` (Optional): A URL or local path (`/local/...`) to override the default BGG box art.
+*   `username` (Optional): If you have multiple BGG accounts synced, specify which one this game belongs to.
 
 ### `bgg_sync.record_play`
 

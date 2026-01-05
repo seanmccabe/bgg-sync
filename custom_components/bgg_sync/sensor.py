@@ -139,6 +139,7 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         
         attrs = {
             "bgg_id": self.game_id,
+            "bgg_url": f"https://boardgamegeek.com/boardgame/{self.game_id}",
             ATTR_GAME_RANK: details.get("rank"),
             ATTR_GAME_YEAR: details.get("year"),
             ATTR_GAME_WEIGHT: details.get("weight"),
