@@ -1,11 +1,15 @@
 {
   "domain": "bgg_sync",
   "name": "BGG Sync",
-  "version": "1.0.0",
-  "codeowners": ["@seanmccabe"],
+  "codeowners": [
+    "@seanmccabe"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/seanmccabe/ha-bgg-sync",
-  "issue_tracker": "https://github.com/seanmccabe/ha-bgg-sync/issues",
   "iot_class": "cloud_polling",
-  "requirements": ["requests>=2.0"]
+  "issue_tracker": "https://github.com/seanmccabe/ha-bgg-sync/issues",
+  "requirements": [
+    "requests>=2.0"
+  ],
+  "version": "1.0.0"
 }
