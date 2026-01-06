@@ -114,3 +114,14 @@ The following features are planned for upcoming releases:
 *   **"Hotness" Sensor**: Track the top trending games on BoardGameGeek.
 *   **Wishlist Tracking**: Monitor the size of your Wishlist or "Must Have" list.
 *   **User Stats**: Advanced user metrics including H-Index and Trade Rating.
+
+
+---
+
+## Disclaimer & Trademarks
+
+**BoardGameGeek Sync (BGG Sync)** is an independent open-source project and is not affiliated with, maintained by, or endorsed by BoardGameGeek, LLC.
+
+* **BoardGameGeek** and **BGG** are registered trademarks of BoardGameGeek, LLC.
+* This integration uses the BoardGameGeek XML API2 but is not an official BoardGameGeek product.
+* All board game data and imagery provided through this integration are the property of their respective owners and BoardGameGeek.
