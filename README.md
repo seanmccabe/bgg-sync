@@ -1,7 +1,5 @@
 # BoardGameGeek Sync (BGG Sync)
 
-
-
 A robust Home Assistant custom integration for verifying and tracking BoardGameGeek (BGG) plays and collection data. It creates sensors for your play counts and collection size, and provides a service to record plays directly from Home Assistant.
 
 <a href="https://boardgamegeek.com">
