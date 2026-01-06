@@ -30,8 +30,10 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
     *   Register a new application (e.g., "Home Assistant").
     *   Click "Tokens" and generate a new token.
     *   Paste this token into the configuration dialogue.
-5.  **Password (Required for Recording Plays)**:
-    *   Enter your BGG password if you intend to use the `record_play` service.
+5.  **Enable Play Logging**:
+    *   Check this box if you want to use the `bgg_sync.record_play` service to log plays to BGG.
+6.  **Password**:
+    *   Enter your BGG password. This is ONLY required if "Enable Play Logging" is checked.
 6.  **Tracked Games**:
     *   Enter a comma-separated list of BGG Game IDs (e.g., `822` for Carcassonne) to create specific sensors for them.
 

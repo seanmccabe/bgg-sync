@@ -39,7 +39,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         # If we have an API token, we don't likely need website session login for FETCHING data.
         # But we might need it for recording plays if we implement that via website scraping.
         # For now, let's keep login separate.
-        if not self.password or self.logged_in:
+        if not self.password:
             return
 
         login_url = "https://boardgamegeek.com/login"

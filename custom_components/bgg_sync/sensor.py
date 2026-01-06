@@ -5,6 +5,7 @@ from typing import Any
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -29,7 +30,22 @@ async def async_setup_entry(
 
     async_add_entities(entities)
 
-class BggPlaysSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
+class BggBaseSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
+    """Base sensor for BGG."""
+    
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator: BggDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.username)},
+            name=f"BGG Sync {coordinator.username}",
+            manufacturer="BoardGameGeek",
+            configuration_url=f"https://boardgamegeek.com/user/{coordinator.username}",
+        )
+
+class BggPlaysSensor(BggBaseSensor):
     """Sensor for BGG total plays."""
 
     _attr_icon = "mdi:dice-multiple"
@@ -38,8 +54,7 @@ class BggPlaysSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.username}_plays"
-        # Names starting with "BGG Sync" will result in sensor.bgg_sync_...
-        self._attr_name = f"BGG Sync {coordinator.username} Plays"
+        self._attr_name = "Plays"
 
     @property
     def native_value(self) -> int:
@@ -53,7 +68,7 @@ class BggPlaysSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
             ATTR_LAST_PLAY: self.coordinator.data.get("last_play")
         }
 
-class BggCollectionSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
+class BggCollectionSensor(BggBaseSensor):
     """Sensor for BGG collection total."""
 
     _attr_icon = "mdi:library-shelves"
@@ -62,14 +77,14 @@ class BggCollectionSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEnt
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.username}_collection"
-        self._attr_name = f"BGG Sync {coordinator.username} Collection"
+        self._attr_name = "Collection"
 
     @property
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
         return self.coordinator.data.get("total_collection")
 
-class BggGamePlaysSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
+class BggGamePlaysSensor(BggBaseSensor):
     """Sensor for BGG plays of a specific game."""
 
     _attr_icon = "mdi:dice-multiple"
@@ -79,7 +94,7 @@ class BggGamePlaysSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEnti
         super().__init__(coordinator)
         self.game_id = game_id
         self._attr_unique_id = f"{coordinator.username}_plays_{game_id}"
-        self._attr_name = f"BGG Sync {coordinator.username} Plays {game_id}"
+        self._attr_name = f"Plays {game_id}"
 
     @property
     def native_value(self) -> int | None:

@@ -7,7 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, CONF_BGG_USERNAME, CONF_BGG_PASSWORD, SERVICE_RECORD_PLAY, CONF_GAMES, CONF_API_TOKEN
+from .const import DOMAIN, CONF_BGG_USERNAME, CONF_BGG_PASSWORD, SERVICE_RECORD_PLAY, CONF_GAMES, CONF_API_TOKEN, CONF_ENABLE_LOGGING
 from .coordinator import BggDataUpdateCoordinator
 import requests
 
@@ -22,7 +22,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     conf = {**entry.data, **entry.options}
     
     username = conf[CONF_BGG_USERNAME]
-    password = conf.get(CONF_BGG_PASSWORD)
+    # If logging is disabled, don't pass the password to coordinator
+    enable_logging = conf.get(CONF_ENABLE_LOGGING, False)
+    # Check both data and options for password as it might be in either
+    raw_password = conf.get(CONF_BGG_PASSWORD)
+    password = raw_password if enable_logging else None
+    
     api_token = conf.get(CONF_API_TOKEN)
     game_ids_raw = conf.get(CONF_GAMES, "")
     game_ids = [int(x.strip()) for x in game_ids_raw.split(",") if x.strip().isdigit()]
