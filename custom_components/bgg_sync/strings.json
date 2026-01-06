@@ -27,7 +27,7 @@
             "init": {
                 "data": {
                     "bgg_password": "BGG Password (required for logging plays)",
-                    "bgg_api_token": "BGG API Token (Optional, for API limits)",
+                    "bgg_api_token": "BGG API Token (Required)",
                     "games": "Board Games (comma separated IDs)"
                 }
             }

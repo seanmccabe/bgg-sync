@@ -94,7 +94,13 @@ class BggGamePlaysSensor(BggBaseSensor):
         super().__init__(coordinator)
         self.game_id = game_id
         self._attr_unique_id = f"{coordinator.username}_plays_{game_id}"
-        self._attr_name = f"Plays {game_id}"
+        
+        # Try to get the game name from coordinator data, fallback to ID
+        game_name = coordinator.data.get("game_details", {}).get(game_id)
+        if game_name:
+            self._attr_name = f"{game_name} Plays"
+        else:
+            self._attr_name = f"Plays {game_id}"
 
     @property
     def native_value(self) -> int | None:

@@ -125,7 +125,7 @@ class BggOptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_ENABLE_LOGGING,
                         default=self.config_entry.options.get(
-                            CONF_ENABLE_LOGGING, False
+                            CONF_ENABLE_LOGGING, self.config_entry.data.get(CONF_ENABLE_LOGGING, False)
                         ),
                     ): bool,
                     vol.Optional(

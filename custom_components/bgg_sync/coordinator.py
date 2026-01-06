@@ -127,6 +127,22 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     root = ET.fromstring(resp.content)
                     data["game_plays"][game_id] = int(root.get("total", 0))
 
+            # 4. Fetch Game Details (Names)
+            if self.game_ids:
+                ids_str = ",".join(map(str, self.game_ids))
+                thing_url = f"{BASE_URL}/thing?id={ids_str}"
+                resp = await self.hass.async_add_executor_job(
+                    lambda: self.session.get(thing_url, headers=self.headers, timeout=10)
+                )
+                if resp.status_code == 200:
+                   root = ET.fromstring(resp.content)
+                   data["game_details"] = {}
+                   for item in root.findall("item"):
+                       g_id = int(item.get("id"))
+                       name_node = item.find("name[@type='primary']")
+                       if name_node is not None:
+                           data["game_details"][g_id] = name_node.get("value")
+
             return data
 
         except Exception as err:
