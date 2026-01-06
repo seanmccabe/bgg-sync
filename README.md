@@ -110,6 +110,7 @@ logger:
 ## Future Features (Roadmap)
 
 The following features are planned for upcoming releases:
+*   **Shelf Tracker**: Track your shelves with BoardGameGeek and Home Assistant.
 *   **"Hotness" Sensor**: Track the top trending games on BoardGameGeek.
 *   **Wishlist Tracking**: Monitor the size of your Wishlist or "Must Have" list.
 *   **User Stats**: Advanced user metrics including H-Index and Trade Rating.
