@@ -1,5 +1,7 @@
 # BoardGameGeek Sync (BGG Sync)
 
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+
 A robust Home Assistant custom integration for verifying and tracking BoardGameGeek (BGG) plays and collection data. It creates sensors for your play counts and collection size, and provides a service to record plays directly from Home Assistant.
 
 <a href="https://boardgamegeek.com">
@@ -19,8 +21,6 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
 
 1.  Copy the `bgg_sync` folder into your Home Assistant `custom_components` directory.
 2.  Restart Home Assistant.
-
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
 *Note: Submission to the default HACS store is coming soon. In the meantime, add this repository as a Custom Repository in HACS.*
 
