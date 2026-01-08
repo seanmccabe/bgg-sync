@@ -1,0 +1,26 @@
+name: Python Validation
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  syntax-check:
+    name: Check Python Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Syntax (compileall)
+        run: |
+          # This will fail if there are any syntax errors in the Python files
+          python3 -m compileall custom_components/bgg_sync

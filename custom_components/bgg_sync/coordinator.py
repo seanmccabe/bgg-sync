@@ -278,46 +278,48 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                                 existing = data["game_details"].get(g_id, {})
                                 # Parse Name (Thing API uses name element with value attribute)
                                 name = existing.get("name")
-                            for n in item.findall("name"):
-                                if n.get("type") == "primary":
-                                    name = n.get("value")
-                                    break
+                                for n in item.findall("name"):
+                                    if n.get("type") == "primary":
+                                        name = n.get("value")
+                                        break
 
-                            # Safe Parsing Helper for Ratings
-                            ratings = item.find("statistics/ratings")
-                            def get_r_val(tag):
-                                if ratings is None: return None
-                                node = ratings.find(tag)
-                                return node.get("value") if node is not None else None
+                                # Safe Parsing Helper for Ratings
+                                ratings = item.find("statistics/ratings")
+                                def get_r_val(tag):
+                                    if ratings is None: return None
+                                    node = ratings.find(tag)
+                                    return node.get("value") if node is not None else None
+                                    
+                                weight_val = get_r_val("averageweight")
+                                rating_val = get_r_val("average")
                                 
-                            weight_val = get_r_val("averageweight")
-                            rating_val = get_r_val("average")
-                            
-                            # Log values for debugging
-                            _LOGGER.info("BGG Sync: Updating %s (ID %s). Found Weight: %s, Rating: %s", name, g_id, weight_val, rating_val)
+                                # Log values for debugging
+                                _LOGGER.info("BGG Sync: Updating %s (ID %s). Found Weight: %s, Rating: %s", name, g_id, weight_val, rating_val)
 
-                            existing.update({
-                                "name": name,
-                                "image": item.findtext("image"),
-                                "year": item.findtext("yearpublished"),
-                                "min_players": item.findtext("minplayers"),
-                                "max_players": item.findtext("maxplayers"),
-                                "playing_time": item.findtext("playingtime"),
-                                "min_playtime": item.findtext("minplaytime"),
-                                "max_playtime": item.findtext("maxplaytime"),
-                                "rank": rank_val,
-                                "weight": weight_val,
-                                "rating": rating_val,
-                                "bayes_rating": get_r_val("bayesaverage"),
-                                "users_rated": get_r_val("usersrated"),
-                                "stddev": get_r_val("stddev"),
-                                "median": get_r_val("median"),
-                                "owned_by": get_r_val("owned"),
-                                "sub_type": item.get("type"),
-                            })
-                            data["game_details"][g_id] = existing
-                        except Exception as e:
-                            _LOGGER.warning("Error parsing game details for ID %s: %s", item.get("id"), e)
+                                existing.update({
+                                    "name": name,
+                                    "image": item.findtext("image"),
+                                    "year": item.findtext("yearpublished"),
+                                    "min_players": item.findtext("minplayers"),
+                                    "max_players": item.findtext("maxplayers"),
+                                    "playing_time": item.findtext("playingtime"),
+                                    "min_playtime": item.findtext("minplaytime"),
+                                    "max_playtime": item.findtext("maxplaytime"),
+                                    "rank": rank_val,
+                                    "weight": weight_val,
+                                    "rating": rating_val,
+                                    "bayes_rating": get_r_val("bayesaverage"),
+                                    "users_rated": get_r_val("usersrated"),
+                                    "stddev": get_r_val("stddev"),
+                                    "median": get_r_val("median"),
+                                    "owned_by": get_r_val("owned"),
+                                    "sub_type": item.get("type"),
+                                })
+                                data["game_details"][g_id] = existing
+                            except Exception as e:
+                                _LOGGER.warning("Error parsing game details for ID %s: %s", item.get("id"), e)
+                    except Exception as e:
+                         _LOGGER.error("Failed to parse BGG XML response: %s", e)
 
             return data
 
