@@ -267,7 +267,20 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                                 if n.get("type") == "primary":
                                     name = n.get("value")
                                     break
-                                    
+
+                            # Safe Parsing Helper for Ratings
+                            ratings = item.find("statistics/ratings")
+                            def get_r_val(tag):
+                                if ratings is None: return None
+                                node = ratings.find(tag)
+                                return node.get("value") if node is not None else None
+                                
+                            weight_val = get_r_val("averageweight")
+                            rating_val = get_r_val("average")
+                            
+                            # Log values for debugging
+                            _LOGGER.info("BGG Sync: Updating %s (ID %s). Found Weight: %s, Rating: %s", name, g_id, weight_val, rating_val)
+
                             existing.update({
                                 "name": name,
                                 "image": item.findtext("image"),
@@ -278,13 +291,13 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                                 "min_playtime": item.findtext("minplaytime"),
                                 "max_playtime": item.findtext("maxplaytime"),
                                 "rank": rank_val,
-                                "weight": item.find("statistics/ratings/averageweight").get("value"),
-                                "rating": item.find("statistics/ratings/average").get("value"),
-                                "bayes_rating": item.find("statistics/ratings/bayesaverage").get("value"),
-                                "users_rated": item.find("statistics/ratings/usersrated").get("value"),
-                                "stddev": item.find("statistics/ratings/stddev").get("value"),
-                                "median": item.find("statistics/ratings/median").get("value"),
-                                "owned_by": item.find("statistics/ratings/owned").get("value"),
+                                "weight": weight_val,
+                                "rating": rating_val,
+                                "bayes_rating": get_r_val("bayesaverage"),
+                                "users_rated": get_r_val("usersrated"),
+                                "stddev": get_r_val("stddev"),
+                                "median": get_r_val("median"),
+                                "owned_by": get_r_val("owned"),
                                 "sub_type": item.get("type"),
                             })
                             data["game_details"][g_id] = existing
