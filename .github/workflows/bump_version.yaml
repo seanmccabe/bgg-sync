@@ -1,0 +1,40 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New Version Number (e.g. 1.0.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update manifest.json
+        run: |
+          # Update version using jq
+          jq --arg v "${{ inputs.version }}" '.version = $v' custom_components/bgg_sync/manifest.json > temp.json && mv temp.json custom_components/bgg_sync/manifest.json
+          
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if [[ -n $(git status -s) ]]; then
+            git add custom_components/bgg_sync/manifest.json
+            git commit -m "chore: bump version to ${{ inputs.version }}"
+            git push
+            echo "Successfully bumped version to ${{ inputs.version }}"
+          else
+            echo "Version in manifest is already ${{ inputs.version }}"
+          fi
