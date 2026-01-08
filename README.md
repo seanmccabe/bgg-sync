@@ -16,6 +16,8 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
 *   **Smart Polling**: Updates every 30 minutes to respect BGG's rate limits and server load.
 *   **Multi-User**: Supports tracking multiple BGG accounts.
 *   **Game Tracking**: Option to track specific games (by ID) to get dedicated sensors with rich metadata (Box Art, Rank, Year).
+*   **Shelf Tracker**: View your full collection as a Home Assistant To-do List.
+*   **Wishlist Monitoring**: Dedicated sensors to track the size of your Wishlist, Want to Play, and other lists.
 
 ## Installation
 
@@ -141,9 +143,7 @@ logger:
 ## Future Features (Roadmap)
 
 The following features are planned for upcoming releases:
-*   **Shelf Tracker**: Track your shelves with BoardGameGeek and Home Assistant.
 *   **"Hotness" Sensor**: Track the top trending games on BoardGameGeek.
-*   **Wishlist Tracking**: Monitor the size of your Wishlist or "Must Have" list.
 *   **User Stats**: Advanced user metrics including H-Index and Trade Rating.
 
 
