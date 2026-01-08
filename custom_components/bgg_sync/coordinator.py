@@ -236,33 +236,48 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     root = ET.fromstring(resp.content)
                     data["game_plays"][game_id] = int(root.get("total", 0))
 
-            # 4. Fetch Rich Game Details (One Batch Request)
-            if self.game_ids:
-                ids_str = ",".join(map(str, self.game_ids))
+            # 4. Fetch Rich Game Details for ALL games (Collection + Tracked)
+            # Combine IDs from collection and explicit tracking
+            all_ids = set(self.game_ids)
+            if "collection" in data:
+                all_ids.update(data["collection"].keys())
+            
+            all_ids_list = list(all_ids)
+            
+            # Batch requests to avoid URL length limits (e.g. 50 IDs per batch)
+            BATCH_SIZE = 50
+            
+            for i in range(0, len(all_ids_list), BATCH_SIZE):
+                batch_ids = all_ids_list[i:i + BATCH_SIZE]
+                if not batch_ids:
+                    continue
+                    
+                ids_str = ",".join(map(str, batch_ids))
                 thing_url = f"{BASE_URL}/thing?id={ids_str}&stats=1"
+                
                 resp = await self.hass.async_add_executor_job(
-                    lambda: self.session.get(thing_url, headers=self.headers, timeout=10)
+                    lambda: self.session.get(thing_url, headers=self.headers, timeout=30)
                 )
-                _LOGGER.debug("Thing API response: %s", resp.status_code)
+                
                 if resp.status_code == 200:
-                    root = ET.fromstring(resp.content)
-                    # Merge into existing details
-                    for item in root.findall("item"):
-                        try:
-                            g_id = int(item.get("id"))
-                            # Safe retrieval of values
-                            rank_val = "Not Ranked"
-                            ranks = item.find("statistics/ratings/ranks")
-                            if ranks:
-                                for rank in ranks.findall("rank"):
-                                    if rank.get("name") == "boardgame":
-                                        rank_val = rank.get("value")
-                                        break
-                                        
-                            
-                            existing = data["game_details"].get(g_id, {})
-                            # Parse Name (Thing API uses name element with value attribute)
-                            name = existing.get("name")
+                    try:
+                        root = ET.fromstring(resp.content)
+                        for item in root.findall("item"):
+                            try:
+                                g_id = int(item.get("id"))
+                                
+                                # Re-parse Rank for consistency
+                                rank_val = "Not Ranked"
+                                ranks = item.find("statistics/ratings/ranks")
+                                if ranks:
+                                    for rank in ranks.findall("rank"):
+                                        if rank.get("name") == "boardgame":
+                                            rank_val = rank.get("value")
+                                            break
+
+                                existing = data["game_details"].get(g_id, {})
+                                # Parse Name (Thing API uses name element with value attribute)
+                                name = existing.get("name")
                             for n in item.findall("name"):
                                 if n.get("type") == "primary":
                                     name = n.get("value")
