@@ -215,7 +215,7 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
         
         attrs = {
-            "bgg_id": self.game_id,
+            "bgg_id": str(self.game_id),
             "bgg_url": f"{BGG_URL}/boardgame/{self.game_id}",
             ATTR_GAME_RANK: details.get("rank"),
             ATTR_GAME_YEAR: details.get("year"),
