@@ -28,7 +28,7 @@ def validate_input(data: dict[str, Any]) -> dict[str, str]:
     # Validate API Token by making a simple request
     # Use the username to fetch collection, which is a standard authenticated read
     username = data[CONF_BGG_USERNAME]
-    token = data[CONF_API_TOKEN]
+    token = data[CONF_API_TOKEN].strip()
     
     # We use a known endpoint that requires auth or we just test general connectivity
     # /collection requires auth if we want private info, but we can just test if the token is accepted
@@ -49,8 +49,10 @@ def validate_input(data: dict[str, Any]) -> dict[str, str]:
         # BGG returns 200 even for errors sometimes, but 401/403 for bad auth if enforced.
         if response.status_code == 401:
             errors[CONF_API_TOKEN] = "invalid_auth"
-        elif response.status_code != 200:
+        elif response.status_code not in (200, 202):
             errors["base"] = "cannot_connect"
+        elif response.status_code == 202:
+            _LOGGER.warning("BGG returned 202 Accepted. Your collection is being processed and may take some time to appear.")
     except Exception:
         errors["base"] = "cannot_connect"
 
