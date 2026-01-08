@@ -123,6 +123,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.warning("Collection API returned status %s for %s (%s)", resp.status_code, self.username, subtype)
 
             data["collection"] = {}
+            data["game_details"] = {}
             # Initialize counts
             data["counts"] = {
                 "owned": 0,
@@ -204,6 +205,9 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                             "coll_id": item.get("collid"),
                         }
                         
+                        # Store in game_details for generic access (used by sensors)
+                        data["game_details"][g_id] = game_obj
+
                         # ONLY add to 'collection' dict if owned (for Shelf/Sensors)
                         if is_owned:
                             data["collection"][g_id] = game_obj
@@ -242,7 +246,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug("Thing API response: %s", resp.status_code)
                 if resp.status_code == 200:
                     root = ET.fromstring(resp.content)
-                    data["game_details"] = {}
+                    # Merge into existing details
                     for item in root.findall("item"):
                         try:
                             g_id = int(item.get("id"))
@@ -255,16 +259,35 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                                         rank_val = rank.get("value")
                                         break
                                         
-                            data["game_details"][g_id] = {
+                            
+                            existing = data["game_details"].get(g_id, {})
+                            # Parse Name (Thing API uses name element with value attribute)
+                            name = existing.get("name")
+                            for n in item.findall("name"):
+                                if n.get("type") == "primary":
+                                    name = n.get("value")
+                                    break
+                                    
+                            existing.update({
+                                "name": name,
                                 "image": item.findtext("image"),
                                 "year": item.findtext("yearpublished"),
                                 "min_players": item.findtext("minplayers"),
                                 "max_players": item.findtext("maxplayers"),
                                 "playing_time": item.findtext("playingtime"),
+                                "min_playtime": item.findtext("minplaytime"),
+                                "max_playtime": item.findtext("maxplaytime"),
                                 "rank": rank_val,
                                 "weight": item.findtext("statistics/ratings/averageweight"),
                                 "rating": item.findtext("statistics/ratings/average"),
-                            }
+                                "bayes_rating": item.find("statistics/ratings/bayesaverage").get("value"),
+                                "users_rated": item.find("statistics/ratings/usersrated").get("value"),
+                                "stddev": item.find("statistics/ratings/stddev").get("value"),
+                                "median": item.find("statistics/ratings/median").get("value"),
+                                "owned_by": item.find("statistics/ratings/owned").get("value"),
+                                "sub_type": item.get("type"),
+                            })
+                            data["game_details"][g_id] = existing
                         except Exception as e:
                             _LOGGER.warning("Error parsing game details for ID %s: %s", item.get("id"), e)
 

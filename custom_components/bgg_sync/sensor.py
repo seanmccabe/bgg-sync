@@ -178,6 +178,13 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         else:
              self._attr_name = f"BGG Game {game_id}"
              
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.username)},
+            name=f"BGG Sync {coordinator.username}",
+            manufacturer="BoardGameGeek",
+            configuration_url=f"{BGG_URL}/user/{coordinator.username}",
+        )
+             
     @property
     def name(self) -> str:
         """Return the name of the entity."""
