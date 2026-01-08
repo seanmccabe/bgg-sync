@@ -36,7 +36,7 @@ async def async_setup_entry(
     entities = [
         BggPlaysSensor(coordinator),
         BggCollectionSensor(coordinator),
-        BggCollectionCountSensor(coordinator, "owned_boardgames", "Games Owned", "mdi:board-game"),
+        BggCollectionCountSensor(coordinator, "owned_boardgames", "Games Owned", "mdi:checkerboard"),
         BggCollectionCountSensor(coordinator, "owned_expansions", "Expansions Owned", "mdi:puzzle"),
         BggCollectionCountSensor(coordinator, "wishlist", "Wishlist", "mdi:gift"),
         BggCollectionCountSensor(coordinator, "want_to_play", "Want to Play", "mdi:chess-pawn"),

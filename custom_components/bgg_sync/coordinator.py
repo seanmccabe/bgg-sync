@@ -142,6 +142,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 for item in all_items:
                     try:
                         # Parse Status
+                        subtype = item.get("subtype")
                         status = item.find("status")
                         is_owned = status.get("own") == "1"
                         is_wishlist = status.get("wishlist") == "1"
