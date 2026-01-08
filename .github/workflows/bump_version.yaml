@@ -34,7 +34,12 @@ jobs:
             git add custom_components/bgg_sync/manifest.json
             git commit -m "chore: bump version to ${{ inputs.version }}"
             git push
-            echo "Successfully bumped version to ${{ inputs.version }}"
+
+            # Create and push the tag
+            git tag "v${{ inputs.version }}"
+            git push origin "v${{ inputs.version }}"
+            
+            echo "Successfully bumped version and tagged v${{ inputs.version }}"
           else
             echo "Version in manifest is already ${{ inputs.version }}"
           fi
