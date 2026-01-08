@@ -26,7 +26,10 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
 
 *Note: Submission to HACS is in the works.*
 
+
 ## Configuration
+
+![Configuration Screenshot Placeholder](https://via.placeholder.com/800x400?text=Configuration+Flow+Screenshot)
 
 1.  Go to **Settings** > **Devices & Services**.
 2.  Click **Add Integration** and search for "BGG Sync".
@@ -42,6 +45,8 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
     *   Enter your BGG password. This is ONLY required if "Enable Play Logging" is checked.
 
 ## Sensors
+
+![Sensors Screenshot Placeholder](https://via.placeholder.com/800x400?text=Sensors+Example)
 
 The integration creates the following sensors:
 

@@ -37,3 +37,38 @@ record_play:
       example: '[{"name": "Sean", "winner": true}, {"name": "Kelly", "winner": false}]'
       selector:
         object:
+
+track_game:
+  description: Add a game to tracking or update its metadata (NFC, Music, Image)
+  fields:
+    bgg_id:
+      description: The BGG ID of the game
+      example: 174430
+      required: true
+      selector:
+        number:
+          mode: box
+    nfc_tag:
+      description: NFC Tag ID to associate with this game
+      example: "04:6B:1A:..."
+      selector:
+        text:
+    music:
+      description: Spotify URI or URL to play when scanned
+      example: "spotify:playlist:37i9dQZF1DXdbXr1tM54sF"
+      selector:
+        text:
+    search_spotify:
+      description: Alternative to music, will search spotify for this term
+      example: "Gloomhaven Soundtrack"
+      selector:
+        text:
+    custom_image:
+      description: Custom image URL for the sensor
+      example: "https://example.com/image.jpg"
+      selector:
+        text:
+    username:
+      description: BGG Username (optional, defaults to first configured)
+      selector:
+        text:

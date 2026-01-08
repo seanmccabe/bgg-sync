@@ -94,28 +94,132 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
             elif resp.status_code == 202:
                 _LOGGER.info("BGG is generating play data for %s, will try again next poll", self.username)
             elif resp.status_code == 401:
-                _LOGGER.error("BGG API 401 Unauthorized for %s. Ensure you have a valid API Token configured.", self.username)
+                _LOGGER.error("BGG API 401 Unauthorised for %s. Ensure you have a valid API Token configured.", self.username)
             else:
                 _LOGGER.warning("Plays API returned status %s for %s", resp.status_code, self.username)
 
-            # 2. Fetch Collection (Owned Games)
-            coll_url = f"{BASE_URL}/collection?username={self.username}&own=1"
-            resp = await self.hass.async_add_executor_job(
-                lambda: self.session.get(coll_url, headers=self.headers, timeout=10)
-            )
-            _LOGGER.debug("Collection API response for %s: %s", self.username, resp.status_code)
-            if resp.status_code == 200:
-                root = ET.fromstring(resp.content)
-                if root.tag == "message":
-                    _LOGGER.info("BGG is still processing collection for %s, will try again next poll", self.username)
+            # 2. Fetch Collection (Games AND Expansions)
+            # BGG API defaults to only returning boardgames if no subtype is specified.
+            # We must fetch boardgames and expansions explicitly to get both.
+            
+            all_items = []
+            
+            for subtype in ["boardgame", "boardgameexpansion"]:
+                coll_url = f"{BASE_URL}/collection?username={self.username}&subtype={subtype}&stats=1"
+                resp = await self.hass.async_add_executor_job(
+                    lambda: self.session.get(coll_url, headers=self.headers, timeout=60)
+                )
+                
+                if resp.status_code == 200:
+                    root = ET.fromstring(resp.content)
+                    if root.tag != "message":
+                        items = root.findall("item")
+                        all_items.extend(items)
+                    else:
+                         _LOGGER.info("BGG is (202) processing collection for %s (%s), will try again next poll", self.username, subtype)
+                elif resp.status_code == 202:
+                     _LOGGER.info("BGG is (202) generating collection data for %s (%s)", self.username, subtype)
                 else:
-                    data["total_collection"] = len(root.findall("item"))
-            elif resp.status_code == 202:
-                _LOGGER.info("BGG is generating collection data for %s, will try again next poll", self.username)
-            elif resp.status_code == 401:
-                _LOGGER.error("BGG API 401 Unauthorized for %s. Ensure you have a valid API Token configured.", self.username)
-            else:
-                _LOGGER.warning("Collection API returned status %s for %s", resp.status_code, self.username)
+                    _LOGGER.warning("Collection API returned status %s for %s (%s)", resp.status_code, self.username, subtype)
+
+            data["collection"] = {}
+            # Initialize counts
+            data["counts"] = {
+                "owned": 0,
+                "owned_boardgames": 0,
+                "owned_expansions": 0,
+                "wishlist": 0,
+                "want_to_play": 0,
+                "want_to_buy": 0,
+                "for_trade": 0,
+                "preordered": 0,
+            }
+
+            # Process Merged Items
+            if all_items:
+                # Deduplication might be needed if an item appears in both lists (unlikely but possible with weird BGG data)
+                # But our dict storage handles overwrite by ID naturally.
+                for item in all_items:
+                    try:
+                        # Parse Status
+                        status = item.find("status")
+                        is_owned = status.get("own") == "1"
+                        is_wishlist = status.get("wishlist") == "1"
+                        is_want_to_play = status.get("wanttoplay") == "1"
+                        is_want_to_buy = status.get("wanttobuy") == "1"
+                        is_for_trade = status.get("fortrade") == "1"
+                        is_preordered = status.get("preordered") == "1"
+
+                        # Increment Counts
+                        if is_owned: 
+                            data["counts"]["owned"] += 1
+                            if subtype == "boardgame":
+                                data["counts"]["owned_boardgames"] += 1
+                            elif subtype == "boardgameexpansion":
+                                data["counts"]["owned_expansions"] += 1
+                            
+                        if is_wishlist: data["counts"]["wishlist"] += 1
+                        if is_want_to_play: data["counts"]["want_to_play"] += 1
+                        if is_want_to_buy: data["counts"]["want_to_buy"] += 1
+                        if is_for_trade: data["counts"]["for_trade"] += 1
+                        if is_preordered: data["counts"]["preordered"] += 1
+
+                        g_id = int(item.get("objectid"))
+                        
+                        # Parse Stats
+                        stats = item.find("stats")
+                        rating = stats.find("rating") if stats is not None else None
+                        ranks = rating.find("ranks") if rating is not None else None
+                        
+                        rank_val = "Not Ranked"
+                        if ranks:
+                            for rank in ranks.findall("rank"):
+                                if rank.get("name") == "boardgame":
+                                    rank_val = rank.get("value")
+                                    break
+
+                        # Build Game Object
+                        game_obj = {
+                            "bgg_id": g_id,
+                            "name": item.findtext("name"),
+                            "image": item.findtext("image"),
+                            "thumbnail": item.findtext("thumbnail"),
+                            "year": item.findtext("yearpublished"),
+                            "numplays": item.findtext("numplays", "0"),
+                            "subtype": item.get("subtype"),
+                            "min_players": stats.get("minplayers") if stats is not None else None,
+                            "max_players": stats.get("maxplayers") if stats is not None else None,
+                            "playing_time": stats.get("playingtime") if stats is not None else None,
+                            "min_playtime": stats.get("minplaytime") if stats is not None else None,
+                            "max_playtime": stats.get("maxplaytime") if stats is not None else None,
+                            "rank": rank_val,
+                            "rating": rating.find("average").get("value") if rating is not None and rating.find("average") is not None else None,
+                            "bayes_rating": rating.find("bayesaverage").get("value") if rating is not None and rating.find("bayesaverage") is not None else None,
+                            "weight": rating.find("averageweight").get("value") if rating is not None and rating.find("averageweight") is not None else None,
+                            "users_rated": rating.find("usersrated").get("value") if rating is not None and rating.find("usersrated") is not None else None,
+                            "stddev": rating.find("stddev").get("value") if rating is not None and rating.find("stddev") is not None else None,
+                            "median": rating.find("median").get("value") if rating is not None and rating.find("median") is not None else None,
+                            "owned_by": stats.get("numowned") if stats is not None else None,
+                            "coll_id": item.get("collid"),
+                        }
+                        
+                        # ONLY add to 'collection' dict if owned (for Shelf/Sensors)
+                        if is_owned:
+                            data["collection"][g_id] = game_obj
+                        
+                        # Always populate game_details so we have data for plays/tracking even if not owned (e.g. wishlist game tracked)
+                        if "game_details" not in data:
+                            data["game_details"] = {}
+                        data["game_details"][g_id] = game_obj
+                        
+                        # Also populate play count even if not owned (you can record plays for friends' games)
+                        data["game_plays"][g_id] = int(game_obj["numplays"])
+                        
+                    except Exception as e:
+                        _LOGGER.warning("Error parsing collection item %s: %s", item.get("objectid"), e)
+            
+            # Update total_collection to match owned count for backward compatibility
+            data["total_collection"] = data["counts"]["owned"]
 
             # 3. Fetch Specific Game Plays
             for game_id in self.game_ids:

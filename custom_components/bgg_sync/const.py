@@ -10,6 +10,8 @@ CONF_BGG_PASSWORD = "bgg_password"
 CONF_API_TOKEN = "bgg_api_token"
 CONF_GAMES = "games"
 CONF_ENABLE_LOGGING = "enable_logging"
+CONF_IMPORT_COLLECTION = "import_collection"
+CONF_ENABLE_SHELF_TODO = "enable_shelf_todo"
 
 ATTR_LAST_PLAY = "last_play"
 ATTR_TOTAL_PLAYS = "total_plays"

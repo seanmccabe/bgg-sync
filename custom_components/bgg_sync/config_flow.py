@@ -10,7 +10,7 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import DOMAIN, CONF_BGG_USERNAME, CONF_BGG_PASSWORD, CONF_API_TOKEN, CONF_GAMES, BASE_URL, CONF_ENABLE_LOGGING
+from .const import DOMAIN, CONF_BGG_USERNAME, CONF_BGG_PASSWORD, CONF_API_TOKEN, CONF_GAMES, BASE_URL, CONF_ENABLE_LOGGING, CONF_IMPORT_COLLECTION, CONF_ENABLE_SHELF_TODO
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -128,6 +128,18 @@ class BggOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_ENABLE_LOGGING,
                         default=self.config_entry.options.get(
                             CONF_ENABLE_LOGGING, self.config_entry.data.get(CONF_ENABLE_LOGGING, False)
+                        ),
+                    ): bool,
+                    vol.Optional(
+                        CONF_IMPORT_COLLECTION,
+                        default=self.config_entry.options.get(
+                            CONF_IMPORT_COLLECTION, False
+                        ),
+                    ): bool,
+                    vol.Optional(
+                        CONF_ENABLE_SHELF_TODO,
+                        default=self.config_entry.options.get(
+                            CONF_ENABLE_SHELF_TODO, True
                         ),
                     ): bool,
                     vol.Optional(

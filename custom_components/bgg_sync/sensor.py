@@ -20,7 +20,8 @@ from .const import (
     CONF_NFC_TAG,
     CONF_MUSIC,
     CONF_CUSTOM_IMAGE,
-    CONF_GAME_DATA
+    CONF_GAME_DATA,
+    CONF_IMPORT_COLLECTION
 )
 from .coordinator import BggDataUpdateCoordinator
 
@@ -35,6 +36,13 @@ async def async_setup_entry(
     entities = [
         BggPlaysSensor(coordinator),
         BggCollectionSensor(coordinator),
+        BggCollectionCountSensor(coordinator, "owned_boardgames", "Games Owned", "mdi:board-game"),
+        BggCollectionCountSensor(coordinator, "owned_expansions", "Expansions Owned", "mdi:puzzle"),
+        BggCollectionCountSensor(coordinator, "wishlist", "Wishlist", "mdi:gift"),
+        BggCollectionCountSensor(coordinator, "want_to_play", "Want to Play", "mdi:chess-pawn"),
+        BggCollectionCountSensor(coordinator, "want_to_buy", "Want to Buy", "mdi:cart"),
+        BggCollectionCountSensor(coordinator, "for_trade", "For Trade", "mdi:swap-horizontal"),
+        BggCollectionCountSensor(coordinator, "preordered", "Preordered", "mdi:clock-outline"),
     ]
 
     # Parse game data from options
@@ -50,13 +58,34 @@ async def async_setup_entry(
                 if gid not in game_data:
                     game_data[gid] = {}
 
+    # Create sensors for explicitly tracked games
     for game_id, metadata in game_data.items():
-        # Ensure ID is int
         try:
             g_id = int(game_id)
             entities.append(BggGameSensor(coordinator, g_id, metadata))
         except ValueError:
             pass
+
+    # If enabled, also add sensors for the ENTIRE collection
+    # We do this by checking the coordinator data, which holds the full collection.
+    # Note: async_setup_entry runs before the first refresh is FINISHED usually,
+    # so coordinator.data might be empty. 
+    # However, if we want to add entities dynamically, we really should assume
+    # the user enabled it and we will add them once data arrives? 
+    # Or simpler: we rely on config_entry options. 
+    # But we don't know the IDs yet if data is empty!
+    # Ideally, we should add them after the first refresh. 
+    # But HA encourages adding entities in setup. 
+    # Let's check if coordinator has data (it might if first refresh is awaited in logic above setup).
+    # Wait, in __init__.py we call `await coordinator.async_config_entry_first_refresh()` BEFORE forwarding.
+    # So coordinator.data IS available here!
+    
+    if entry.options.get(CONF_IMPORT_COLLECTION, False):
+        collection = coordinator.data.get("collection", {})
+        for g_id in collection:
+            # Avoid duplicates if already tracked above
+            if str(g_id) not in game_data:
+                entities.append(BggGameSensor(coordinator, g_id, {}))
 
     async_add_entities(entities)
 
@@ -112,7 +141,24 @@ class BggCollectionSensor(BggBaseSensor):
     @property
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        return self.coordinator.data.get("total_collection")
+        # Use the explicit 'owned' count if available, else standard total
+        return self.coordinator.data.get("counts", {}).get("owned", self.coordinator.data.get("total_collection"))
+
+class BggCollectionCountSensor(BggBaseSensor):
+    """Sensor for other BGG collection counts (Wishlist, Want to Play, etc)."""
+
+    def __init__(self, coordinator: BggDataUpdateCoordinator, key: str, name: str, icon: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self.key = key
+        self._attr_unique_id = f"{coordinator.username}_{key}"
+        self._attr_name = name
+        self._attr_icon = icon
+
+    @property
+    def native_value(self) -> int:
+        """Return the count."""
+        return self.coordinator.data.get("counts", {}).get(self.key, 0)
 
 class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
     """Sensor for a specific game with rich metadata."""
@@ -125,11 +171,19 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         self.game_id = game_id
         self.user_data = user_data
         self._attr_unique_id = f"{coordinator.username}_game_{game_id}"
-        # Name it "BGG Game: Name" if possible, or fall back to ID
-        # We can't know the name at init time easily without cache, 
-        # so we'll start with ID and let update populate it? 
-        # Actually HA prefers static names if possible, but dynamic is okay.
-        self._attr_name = f"BGG Game {game_id}"
+        # Try to find name in coordinator data immediately
+        name = coordinator.data.get("game_details", {}).get(game_id, {}).get("name")
+        if name:
+             self._attr_name = name
+        else:
+             self._attr_name = f"BGG Game {game_id}"
+             
+    @property
+    def name(self) -> str:
+        """Return the name of the entity."""
+        # Allow dynamic name updates if it wasn't available at init
+        details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
+        return details.get("name") or self._attr_name
 
     @property
     def native_value(self) -> int | None:
@@ -160,9 +214,20 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
             ATTR_GAME_YEAR: details.get("year"),
             ATTR_GAME_WEIGHT: details.get("weight"),
             ATTR_GAME_PLAYING_TIME: details.get("playing_time"),
+            "min_playtime": details.get("min_playtime"),
+            "max_playtime": details.get("max_playtime"),
             "rating": details.get("rating"),
+            "bayes_rating": details.get("bayes_rating"),
+            "weight": details.get("weight"),
+            "rank": details.get("rank"),
             "min_players": details.get("min_players"),
             "max_players": details.get("max_players"),
+            "users_rated": details.get("users_rated"),
+            "owned_by": details.get("owned_by"),
+            "sub_type": details.get("subtype"),
+            "stddev": details.get("stddev"),
+            "median": details.get("median"),
+            "coll_id": details.get("coll_id"),
         }
 
         # User added data
