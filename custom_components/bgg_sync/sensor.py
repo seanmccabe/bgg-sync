@@ -84,7 +84,7 @@ async def async_setup_entry(
         collection = coordinator.data.get("collection", {})
         for g_id in collection:
             # Avoid duplicates if already tracked above
-            if str(g_id) not in game_data:
+            if g_id not in game_data and str(g_id) not in game_data:
                 entities.append(BggGameSensor(coordinator, g_id, {}))
 
     async_add_entities(entities)
