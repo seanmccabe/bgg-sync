@@ -1,6 +1,12 @@
 # BoardGameGeek Sync (BGG Sync)
 
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+
 A robust Home Assistant custom integration for verifying and tracking BoardGameGeek (BGG) plays and collection data. It creates sensors for your play counts and collection size, and provides a service to record plays directly from Home Assistant.
+
+<a href="https://boardgamegeek.com">
+  <img src="https://cf.geekdo-images.com/HZy35cmzmmyV9BarSuk6ug__small/img/gbE7sulIurZE_Tx8EQJXnZSKI6w=/fit-in/200x150/filters:strip_icc()/pic7779581.png" alt="Powered by BoardGameGeek" />
+</a>
 
 ## Features
 
@@ -13,8 +19,12 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
 
 ## Installation
 
-1.  Copy the `bgg_sync` folder into your Home Assistant `custom_components` directory.
-2.  Restart Home Assistant.
+1.  Ensure you have [HACS](https://hacs.xyz/) installed.
+2.  Add this repository as a [Custom Repository](https://hacs.xyz/docs/faq/custom_repositories) in HACS.
+3.  Search for "BGG Sync" and download it.
+4.  Restart Home Assistant.
+
+*Note: Submission to HACS is in the works.*
 
 ## Configuration
 
@@ -26,8 +36,10 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
     *   Register a new application (e.g., "Home Assistant").
     *   Click "Tokens" and generate a new token.
     *   Paste this token into the configuration dialogue.
-5.  **Password (Required for Recording Plays)**:
-    *   Enter your BGG password if you intend to use the `record_play` service.
+5.  **Enable Play Logging**:
+    *   Check this box if you want to use the `bgg_sync.record_play` service to log plays to BGG.
+6.  **Password**:
+    *   Enter your BGG password. This is ONLY required if "Enable Play Logging" is checked.
 
 ## Sensors
 
@@ -120,3 +132,22 @@ logger:
   logs:
     custom_components.bgg_sync: debug
 ```
+
+## Future Features (Roadmap)
+
+The following features are planned for upcoming releases:
+*   **Shelf Tracker**: Track your shelves with BoardGameGeek and Home Assistant.
+*   **"Hotness" Sensor**: Track the top trending games on BoardGameGeek.
+*   **Wishlist Tracking**: Monitor the size of your Wishlist or "Must Have" list.
+*   **User Stats**: Advanced user metrics including H-Index and Trade Rating.
+
+
+---
+
+## Disclaimer & Trademarks
+
+**BoardGameGeek Sync (BGG Sync)** is an independent open-source project and is not affiliated with, maintained by, or endorsed by BoardGameGeek, LLC.
+
+* **BoardGameGeek** and **BGG** are registered trademarks of BoardGameGeek, LLC.
+* This integration uses the BoardGameGeek XML API2 but is not an official BoardGameGeek product.
+* All board game data and imagery provided through this integration are the property of their respective owners and BoardGameGeek.

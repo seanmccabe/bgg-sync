@@ -6,7 +6,7 @@ import requests
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import BASE_URL
+from .const import BASE_URL, BGG_URL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,10 +39,10 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         # If we have an API token, we don't likely need website session login for FETCHING data.
         # But we might need it for recording plays if we implement that via website scraping.
         # For now, let's keep login separate.
-        if not self.password or self.logged_in:
+        if not self.password:
             return
 
-        login_url = "https://boardgamegeek.com/login"
+        login_url = f"{BGG_URL}/login"
         login_data = {"username": self.username, "password": self.password}
         
         try:

@@ -6,14 +6,16 @@
                 "data": {
                     "bgg_username": "BoardGameGeek Username",
                     "bgg_password": "BGG Password (required for logging plays)",
-                    "bgg_api_token": "BGG API Token (Optional, for API limits)",
-                    "games": "Board Games (comma separated IDs, e.g. 822 for Carcassonne)"
+                    "bgg_api_token": "BGG API Token (Required)",
+                    "games": "Board Games (comma separated IDs, e.g. 822 for Carcassonne)",
+                    "enable_logging": "Enable Play Logging?"
                 }
             }
         },
         "error": {
-            "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
+            "cannot_connect": "Failed to connect to BoardGameGeek",
+            "invalid_auth": "Invalid API Token or Authentication",
+            "password_required_for_logging": "Password is required if play logging is enabled",
             "unknown": "Unexpected error"
         },
         "abort": {
@@ -25,7 +27,7 @@
             "init": {
                 "data": {
                     "bgg_password": "BGG Password (required for logging plays)",
-                    "bgg_api_token": "BGG API Token (Optional, for API limits)",
+                    "bgg_api_token": "BGG API Token (Required)",
                     "games": "Board Games (comma separated IDs)"
                 }
             }

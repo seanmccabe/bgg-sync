@@ -18,7 +18,9 @@ from .const import (
     CONF_GAME_DATA,
     CONF_NFC_TAG,
     CONF_MUSIC,
-    CONF_CUSTOM_IMAGE
+    CONF_CUSTOM_IMAGE,
+    CONF_ENABLE_LOGGING,
+    BGG_URL
 )
 from .coordinator import BggDataUpdateCoordinator
 import requests
@@ -34,7 +36,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     conf = {**entry.data, **entry.options}
     
     username = conf[CONF_BGG_USERNAME]
-    password = conf.get(CONF_BGG_PASSWORD)
+    # If logging is disabled, don't pass the password to coordinator
+    enable_logging = conf.get(CONF_ENABLE_LOGGING, False)
+    # Check both data and options for password as it might be in either
+    raw_password = conf.get(CONF_BGG_PASSWORD)
+    password = raw_password if enable_logging else None
+    
     api_token = conf.get(CONF_API_TOKEN)
     
     # 1. Parse legacy CSV list
@@ -157,10 +164,10 @@ def record_play_on_bgg(username, password, game_id, date, length, comments, play
     session = requests.Session()
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Referer": "https://boardgamegeek.com/login"
+        "Referer": f"{BGG_URL}/login"
     })
     
-    login_url = "https://boardgamegeek.com/login/api/v1"
+    login_url = f"{BGG_URL}/login/api/v1"
     login_payload = {"credentials": {"username": username, "password": password}}
     
     try:
@@ -173,7 +180,7 @@ def record_play_on_bgg(username, password, game_id, date, length, comments, play
              _LOGGER.error("BGG Login failed for %s. Status: %s, Body: %s", username, response.status_code, response.text)
              return
 
-        play_url = "https://boardgamegeek.com/geekplay.php"
+        play_url = f"{BGG_URL}/geekplay.php"
         # BGG Play data format is complex, often involves XML or specific form fields.
         # This is a simplified version; in a real library it would be more robust.
         # Most BGG play loggers use the PHP endpoint.
@@ -194,7 +201,7 @@ def record_play_on_bgg(username, password, game_id, date, length, comments, play
         # This part is highly dependent on BGG's internal form structure.
         
         # Update Referer for the play post
-        session.headers.update({"Referer": f"https://boardgamegeek.com/boardgame/{game_id}"})
+        session.headers.update({"Referer": f"{BGG_URL}/boardgame/{game_id}"})
         
         resp = session.post(play_url, data=data, timeout=10)
         _LOGGER.debug("Record Play Response Code: %s | Body: %s", resp.status_code, resp.text[:1000])
