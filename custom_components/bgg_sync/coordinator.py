@@ -243,10 +243,10 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 all_ids.update(data["collection"].keys())
             
             all_ids_list = list(all_ids)
-            _LOGGER.debug("BGG Sync: Processing rich details for %d games...", len(all_ids_list))
+            _LOGGER.info("BGG Sync: Processing rich details for %d games...", len(all_ids_list))
             
-            # Batch requests to avoid URL length limits (e.g. 50 IDs per batch)
-            BATCH_SIZE = 50
+            # Batch requests to avoid URL length limits. BGG 400s if URL is too long.
+            BATCH_SIZE = 20
             
             for i in range(0, len(all_ids_list), BATCH_SIZE):
                 batch_ids = all_ids_list[i:i + BATCH_SIZE]
@@ -255,11 +255,16 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     
                 ids_str = ",".join(map(str, batch_ids))
                 thing_url = f"{BASE_URL}/thing?id={ids_str}&stats=1"
+                _LOGGER.debug("Requesting batch %d: %s", i, thing_url)
                 
                 resp = await self.hass.async_add_executor_job(
                     lambda: self.session.get(thing_url, headers=self.headers, timeout=30)
                 )
                 
+                if resp.status_code != 200:
+                    _LOGGER.warning("Thing API failed for batch starting at index %s. Status: %s", i, resp.status_code)
+                    continue
+
                 if resp.status_code == 200:
                     try:
                         root = ET.fromstring(resp.content)
