@@ -292,9 +292,13 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                                     
                                 weight_val = get_r_val("averageweight")
                                 rating_val = get_r_val("average")
+                                image_val = item.findtext("image")
                                 
                                 # Log values for debugging
-                                _LOGGER.info("BGG Sync: Updating %s (ID %s). Found Weight: %s, Rating: %s", name, g_id, weight_val, rating_val)
+                                _LOGGER.info(
+                                    "BGG Sync Update: %s (ID %s) | W: %s | R: %s | Img: %s | Yr: %s | Rank: %s",
+                                    name, g_id, weight_val, rating_val, "Yes" if image_val else "No", item.findtext("yearpublished"), rank_val
+                                )
 
                                 existing.update({
                                     "name": name,
