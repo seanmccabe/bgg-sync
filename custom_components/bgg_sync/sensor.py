@@ -237,11 +237,14 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
             "max_players": details.get("max_players"),
             "users_rated": details.get("users_rated"),
             "owned_by": details.get("owned_by"),
-            "sub_type": details.get("subtype"),
+            "sub_type": details.get("sub_type"),
             "stddev": details.get("stddev"),
             "median": details.get("median"),
-            "coll_id": details.get("coll_id"),
         }
+        
+        # Only add coll_id if it exists (it won't for non-collection tracked games)
+        if cid := details.get("coll_id"):
+            attrs["coll_id"] = cid
 
         # User added data
         if tag := self.user_data.get(CONF_NFC_TAG):
