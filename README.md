@@ -2,7 +2,7 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
-A robust Home Assistant custom integration for verifying and tracking BoardGameGeek (BGG) plays and collection data. It creates sensors for your play counts and collection size, and provides a service to record plays directly from Home Assistant.
+A robust Home Assistant custom integration for verifying and tracking BoardGameGeek (BGG) plays and collection data. It creates sensors for your play counts and collection, and provides a service to record plays directly from Home Assistant.
 
 <a href="https://boardgamegeek.com">
   <img src="https://cf.geekdo-images.com/HZy35cmzmmyV9BarSuk6ug__small/img/gbE7sulIurZE_Tx8EQJXnZSKI6w=/fit-in/200x150/filters:strip_icc()/pic7779581.png" alt="Powered by BoardGameGeek" />
@@ -10,14 +10,15 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
 
 ## Features
 
+*   **Game Tracking**: Option to track specific games (by ID) to get dedicated sensors with rich metadata (Box Art, Rank, Year, weight and more)!
+*   **Shelf Tracker**: View your full collection as a Home Assistant To-do List.
+*   **Play Recording**: Includes a `bgg_sync.record_play` service to log plays to your BGG account.
+*   **Multi-User**: Supports tracking multiple BGG accounts.
+*   **Wishlist Monitoring**: Dedicated sensors to track the size of your collection, Owned, Want-to-own, wishlist and more!
+*   **Custom Attributes**: Add custom attributes including nfc_tag and music to your sensors to track additional information about your games and create amazing automations.
 *   **Direct API Integration**: Uses the BGG XML API2 directly (no third-party library dependencies) for maximum reliability.
 *   **Authentication Support**: Supports BGG's new API Token requirement for data fetching.
-*   **Play Recording**: Includes a `bgg_sync.record_play` service to log plays to your BGG account (bypassing the read-only XML API restrictions).
 *   **Smart Polling**: Updates every 30 minutes to respect BGG's rate limits and server load.
-*   **Multi-User**: Supports tracking multiple BGG accounts.
-*   **Game Tracking**: Option to track specific games (by ID) to get dedicated sensors with rich metadata (Box Art, Rank, Year).
-*   **Shelf Tracker**: View your full collection as a Home Assistant To-do List.
-*   **Wishlist Monitoring**: Dedicated sensors to track the size of your Wishlist, Want to Play, and other lists.
 
 ## Installation
 
@@ -46,6 +47,16 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
 6.  **Password**:
     *   Enter your BGG password. This is ONLY required if "Enable Play Logging" is checked.
 
+IF you want to turn on Collection tracking and not just via the to-do list, you will need to enable the "Track Collection" option.
+
+1.  Go to **Settings** > **Devices & Services**.
+2.  Search for "BGG Sync" and click on it.
+3.  Click on the Cog icon for the user you want to enable collection tracking for.
+4.  Enable the "Track Collection" option.
+5.  Submit.
+
+**Note:** Collection tracking can take a few minutes to populate. In large collections this can great hundreds of sensors, so it may take a while and may cause degradation in performance.
+
 ## Sensors
 
 ![Sensors Screenshot Placeholder](https://via.placeholder.com/800x400?text=Sensors+Example)
@@ -55,10 +66,10 @@ The integration creates the following sensors:
 *   `sensor.bgg_sync_{username}_plays`: Total number of plays recorded.
     *   *Attributes*: `last_play_game`, `last_play_date`, `last_play_comment`, `last_play_id`.
 *   `sensor.bgg_sync_{username}_collection`: Total number of games in your collection (owned).
-*   `bgg_game_{id}`: A rich sensor for a specific tracked game.
+*   `sensor.{game_name}`: A rich sensor for a specific tracked game.
     *   **State**: Total Plays.
     *   **Entity Picture**: The authentic game box art from BGG (or your custom override).
-    *   **Attributes**: `rank`, `year`, `weight` (complexity), `playing_time`, `bgg_url`, plus any custom `nfc_tag` or `music` you defined.
+    *   **Attributes**: Multiple attributes including; `rank`, `year`, `weight` (complexity), `playing_time`, `bgg_url`, plus custom `nfc_tag` and `music` attributes that can be added to the game.
 
 ## Services
 
