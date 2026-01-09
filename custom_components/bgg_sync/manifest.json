@@ -5,9 +5,9 @@
     "@seanmccabe"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/seanmccabe/ha-bgg-sync",
+  "documentation": "https://github.com/seanmccabe/bgg-sync",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/seanmccabe/ha-bgg-sync/issues",
+  "issue_tracker": "https://github.com/seanmccabe/bgg-sync/issues",
   "requirements": [
     "requests>=2.0"
   ],
