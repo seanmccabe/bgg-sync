@@ -163,6 +163,7 @@ class BggCollectionCountSensor(BggBaseSensor):
 class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
     """Sensor for a specific game with rich metadata."""
 
+    _attr_icon = "mdi:dice-multiple"
 
     def __init__(self, coordinator: BggDataUpdateCoordinator, game_id: int, user_data: dict) -> None:
         """Initialize the sensor."""

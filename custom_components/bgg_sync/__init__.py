@@ -121,6 +121,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             music = call.data.get("music") or call.data.get("search_spotify")
             custom_image = call.data.get("custom_image")
             
+            _LOGGER.info("Tracking request for ID %s | NFC: %s | Music: %s", bgg_id, nfc, music)
+            
             # Find entry (default to first if not specified)
             # Support optional 'username' to target specific instance
             target_username = call.data.get("username")
@@ -154,6 +156,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             current_data[str(bgg_id)] = metadata
             new_options[CONF_GAME_DATA] = current_data
             
+            _LOGGER.info("Updating entry options with new metadata for %s", bgg_id)
             hass.config_entries.async_update_entry(entry, options=new_options)
             
         hass.services.async_register(DOMAIN, SERVICE_TRACK_GAME, async_track_game)
