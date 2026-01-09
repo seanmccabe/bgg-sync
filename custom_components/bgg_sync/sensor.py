@@ -163,7 +163,6 @@ class BggCollectionCountSensor(BggBaseSensor):
 class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
     """Sensor for a specific game with rich metadata."""
 
-    _attr_icon = "mdi:dice-multiple"
 
     def __init__(self, coordinator: BggDataUpdateCoordinator, game_id: int, user_data: dict) -> None:
         """Initialize the sensor."""
@@ -198,12 +197,17 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         return self.coordinator.data.get("game_plays", {}).get(self.game_id, 0)
 
     @property
+    def icon(self) -> str | None:
+        """Return the icon of the sensor, unless a picture is present."""
+        if self.entity_picture:
+            return None
+        return "mdi:dice-multiple"
+
+    @property
     def entity_picture(self) -> str | None:
         """Return the entity picture."""
         # 1. User override
         if cust := self.user_data.get(CONF_CUSTOM_IMAGE):
-            # Check if it's a local file path starting with /local/
-            # or a full URL.
             return cust
         
         # 2. BGG Image
@@ -217,6 +221,7 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         attrs = {
             "bgg_id": str(self.game_id),
             "bgg_url": f"{BGG_URL}/boardgame/{self.game_id}",
+            "image_url": details.get("image"), # Explicitly expose URL for debugging
             ATTR_GAME_RANK: details.get("rank"),
             ATTR_GAME_YEAR: details.get("year"),
             ATTR_GAME_WEIGHT: details.get("weight"),
