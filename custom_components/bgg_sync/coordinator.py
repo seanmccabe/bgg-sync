@@ -243,6 +243,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 all_ids.update(data["collection"].keys())
             
             all_ids_list = list(all_ids)
+            _LOGGER.debug("BGG Sync: Processing rich details for %d games...", len(all_ids_list))
             
             # Batch requests to avoid URL length limits (e.g. 50 IDs per batch)
             BATCH_SIZE = 50
@@ -294,8 +295,8 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                                 rating_val = get_r_val("average")
                                 image_val = item.findtext("image")
                                 
-                                # Log values for debugging
-                                _LOGGER.info(
+                                # Log values for debugging (using DEBUG level so it appears in logs)
+                                _LOGGER.debug(
                                     "BGG Sync Update: %s (ID %s) | W: %s | R: %s | Img: %s | Yr: %s | Rank: %s",
                                     name, g_id, weight_val, rating_val, "Yes" if image_val else "No", item.findtext("yearpublished"), rank_val
                                 )
