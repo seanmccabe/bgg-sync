@@ -1,6 +1,6 @@
 # <img src="brand_images/icon.png" width="40"/> BoardGameGeek Sync (BGG Sync)
 
-[![GitHub Release][releases-shield]][releases] [![License][license-shield]](LICENSE) [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![GitHub Release][releases-shield]][releases] [![License][license-shield]](LICENSE) [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration) ![Tests](https://github.com/seanmccabe/bgg-sync/actions/workflows/tests.yaml/badge.svg)
 
 BoardGameGeek (BGG) integration for Home Assistant. A robust custom component for verifying and tracking plays and collection data. It creates sensors for your play counts and collection, and provides a service to record plays directly from Home Assistant.
 
@@ -171,6 +171,29 @@ logger:
 The following features are planned for upcoming releases:
 *   **"Hotness" Sensor**: Track the top trending games on BoardGameGeek.
 *   **User Stats**: Advanced user metrics including H-Index and Trade Rating.
+
+---
+
+## Development & Testing
+
+This project includes a comprehensive test suite covering the coordinator, config flow, sensors, and services. We aim for high test coverage (>80%) to ensure reliability.
+
+To run the tests locally:
+
+1.  **Install test dependencies**:
+    ```bash
+    pip install -r requirements_test.txt
+    ```
+
+2.  **Run tests with coverage**:
+    ```bash
+    PYTHONPATH=. pytest --cov=custom_components.bgg_sync --cov-report term-missing tests/
+    ```
+
+3.  **Run pre-commit hooks** (Linting & Formatting):
+    ```bash
+    pre-commit run --all-files
+    ```
 
 ---
 

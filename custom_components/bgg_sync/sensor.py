@@ -1,5 +1,6 @@
 """Sensor platform for BGG Sync integration."""
 from __future__ import annotations
+import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
@@ -24,6 +25,8 @@ from .const import (
     CONF_IMPORT_COLLECTION,
 )
 from .coordinator import BggDataUpdateCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -75,7 +78,7 @@ async def async_setup_entry(
             g_id = int(game_id)
             entities.append(BggGameSensor(coordinator, g_id, metadata))
         except ValueError:
-            pass
+            _LOGGER.warning("Error creating sensor for game ID %s: invalid ID", game_id)
 
     # If enabled, also add sensors for the ENTIRE collection
     # We do this by checking the coordinator data, which holds the full collection.

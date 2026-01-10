@@ -1,0 +1,131 @@
+<?xml version='1.0' encoding='utf-8'?>
+<items totalitems="10" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse" pubdate="Sat, 10 Jan 2026 04:34:28 +0000">
+		<item objecttype="thing" objectid="822" subtype="boardgame" collid="79171091">
+	<name sortindex="1">Carcassonne</name>
+		<yearpublished>2012</yearpublished>			<image>https://cf.geekdo-images.com/xQYtbukJ14Y8c5eWXSp5vg__original/img/r8-70qCHqTEaEoSkXmAgqhYaFNY=/0x0/filters:format(jpeg)/pic1454200.jpg</image>
+		<thumbnail>https://cf.geekdo-images.com/xQYtbukJ14Y8c5eWXSp5vg__small/img/aoo81GxmPtDEkQ2jOcHHoRGcyYM=/fit-in/200x150/filters:strip_icc()/pic1454200.jpg</thumbnail>
+		<stats minplayers="2" maxplayers="5" minplaytime="30" maxplaytime="45" playingtime="45" numowned="218382">
+				<rating value="N/A">			<usersrated value="137486" />			<average value="7.41482" />
+			<bayesaverage value="7.29689" />			<stddev value="1.31255" />
+			<median value="0" />			<ranks>
+												<rank type="subtype" id="1" name="boardgame" friendlyname="Board Game Rank" value="238" bayesaverage="7.29689" />
+																<rank type="family" id="5499" name="familygames" friendlyname="Family Game Rank" value="56" bayesaverage="7.28924" />
+											</ranks>		</rating>
+			</stats>	<status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" lastmodified="2021-02-04 02:54:23" />
+	<numplays>142</numplays>							</item>
+		<item objecttype="thing" objectid="68448" subtype="boardgame" collid="78200781">
+	<name sortindex="1">7 Wonders</name>
+		<yearpublished>2010</yearpublished>			<image>https://cf.geekdo-images.com/RvFVTEpnbb4NM7k0IF8V7A__original/img/JQvRoz0xns9LZII74-ygKGDq_Es=/0x0/filters:format(jpeg)/pic860217.jpg</image>
+		<thumbnail>https://cf.geekdo-images.com/RvFVTEpnbb4NM7k0IF8V7A__small/img/ZlG_SRFChObHenw79fAve56_mnk=/fit-in/200x150/filters:strip_icc()/pic860217.jpg</thumbnail>
+		<stats minplayers="2" maxplayers="7" minplaytime="30" maxplaytime="30" playingtime="30" numowned="153555">
+				<rating value="N/A">			<usersrated value="111279" />			<average value="7.66528" />
+			<bayesaverage value="7.55249" />			<stddev value="1.27714" />
+			<median value="0" />			<ranks>
+												<rank type="subtype" id="1" name="boardgame" friendlyname="Board Game Rank" value="112" bayesaverage="7.55249" />
+																<rank type="family" id="5497" name="strategygames" friendlyname="Strategy Game Rank" value="118" bayesaverage="7.51651" />
+								<rank type="family" id="5499" name="familygames" friendlyname="Family Game Rank" value="21" bayesaverage="7.54644" />
+											</ranks>		</rating>
+			</stats>	<status own="0" prevowned="1" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" lastmodified="2022-12-09 20:54:00" />
+	<numplays>4</numplays>							</item>
+		<item objecttype="thing" objectid="173346" subtype="boardgame" collid="99409374">
+	<name sortindex="1">7 Wonders Duel</name>
+		<yearpublished>2019</yearpublished>			<image>https://cf.geekdo-images.com/Jc3uWrLDnJJY84-09lBN-Q__original/img/UvO_Q5gJGLk3EzJGQuYcC-QzoXQ=/0x0/filters:format(jpeg)/pic5646331.jpg</image>
+		<thumbnail>https://cf.geekdo-images.com/Jc3uWrLDnJJY84-09lBN-Q__small/img/LpDAthMufsuH6fn566rhRNz-V4k=/fit-in/200x150/filters:strip_icc()/pic5646331.jpg</thumbnail>
+		<stats minplayers="2" maxplayers="2" minplaytime="30" maxplaytime="30" playingtime="30" numowned="179891">
+				<rating value="N/A">			<usersrated value="106570" />			<average value="8.08077" />
+			<bayesaverage value="7.95541" />			<stddev value="1.19963" />
+			<median value="0" />			<ranks>
+												<rank type="subtype" id="1" name="boardgame" friendlyname="Board Game Rank" value="23" bayesaverage="7.95541" />
+																<rank type="family" id="5497" name="strategygames" friendlyname="Strategy Game Rank" value="27" bayesaverage="7.92025" />
+											</ranks>		</rating>
+			</stats>	<status own="0" prevowned="1" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" lastmodified="2022-12-09 20:54:14" />
+	<numplays>2</numplays>							</item>
+		<item objecttype="thing" objectid="423553" subtype="boardgame" collid="124857064">
+	<name sortindex="1">Above and Below: Haunted</name>
+		<yearpublished>2025</yearpublished>			<image>https://cf.geekdo-images.com/s8R-BQcI4EB69SOkG5Rprg__original/img/Cbs4QLx3DvAJZv6qwHYnpEFVxGU=/0x0/filters:format(jpeg)/pic8293357.jpg</image>
+		<thumbnail>https://cf.geekdo-images.com/s8R-BQcI4EB69SOkG5Rprg__small/img/8bEr__M9jsrcVbqJ2Wm6bicBdGY=/fit-in/200x150/filters:strip_icc()/pic8293357.jpg</thumbnail>
+		<stats minplayers="2" maxplayers="4" minplaytime="60" maxplaytime="120" playingtime="120" numowned="1694">
+				<rating value="N/A">			<usersrated value="351" />			<average value="8.15709" />
+			<bayesaverage value="5.84931" />			<stddev value="1.06835" />
+			<median value="0" />			<ranks>
+												<rank type="subtype" id="1" name="boardgame" friendlyname="Board Game Rank" value="4227" bayesaverage="5.84931" />
+											</ranks>		</rating>
+			</stats>	<status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" lastmodified="2025-06-12 23:51:55" />
+	<numplays>0</numplays>							</item>
+		<item objecttype="thing" objectid="349963" subtype="boardgame" collid="99441755">
+	<name sortindex="1">Age of Comics: The Golden Years</name>
+		<yearpublished>2023</yearpublished>			<image>https://cf.geekdo-images.com/lhVWWA7ovNofeOVcSSBMsw__original/img/54x7FHuCG9YlMJ4GguZiCkBzTg8=/0x0/filters:format(jpeg)/pic6886727.jpg</image>
+		<thumbnail>https://cf.geekdo-images.com/lhVWWA7ovNofeOVcSSBMsw__small/img/UZpsQcapju0kh9ZsVdDGHXcXVsg=/fit-in/200x150/filters:strip_icc()/pic6886727.jpg</thumbnail>
+		<stats minplayers="1" maxplayers="4" minplaytime="50" maxplaytime="120" playingtime="120" numowned="2437">
+				<rating value="N/A">			<usersrated value="1095" />			<average value="7.33201" />
+			<bayesaverage value="6.06332" />			<stddev value="1.26445" />
+			<median value="0" />			<ranks>
+												<rank type="subtype" id="1" name="boardgame" friendlyname="Board Game Rank" value="2801" bayesaverage="6.06332" />
+																<rank type="family" id="5496" name="thematic" friendlyname="Thematic Rank" value="534" bayesaverage="6.32331" />
+								<rank type="family" id="5497" name="strategygames" friendlyname="Strategy Game Rank" value="1297" bayesaverage="6.19242" />
+											</ranks>		</rating>
+			</stats>	<status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" lastmodified="2023-11-02 04:36:48" />
+	<numplays>2</numplays>							</item>
+		<item objecttype="thing" objectid="161970" subtype="boardgame" collid="77597525">
+	<name sortindex="1">Alchemists</name>
+		<yearpublished>2014</yearpublished>			<image>https://cf.geekdo-images.com/ztNshEv3Fsm46HCJaEOFPw__original/img/SP4ItZ27dLweUPbz_bF7C-P7GtA=/0x0/filters:format(png)/pic2241156.png</image>
+		<thumbnail>https://cf.geekdo-images.com/ztNshEv3Fsm46HCJaEOFPw__small/img/-a0oJ_E49V_7PDW78W7KIyS3rF8=/fit-in/200x150/filters:strip_icc()/pic2241156.png</thumbnail>
+		<stats minplayers="2" maxplayers="4" minplaytime="120" maxplaytime="120" playingtime="120" numowned="33087">
+				<rating value="N/A">			<usersrated value="24162" />			<average value="7.63718" />
+			<bayesaverage value="7.39747" />			<stddev value="1.43195" />
+			<median value="0" />			<ranks>
+												<rank type="subtype" id="1" name="boardgame" friendlyname="Board Game Rank" value="175" bayesaverage="7.39747" />
+																<rank type="family" id="5497" name="strategygames" friendlyname="Strategy Game Rank" value="146" bayesaverage="7.4188" />
+											</ranks>		</rating>
+			</stats>	<status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" lastmodified="2020-12-27 00:03:18" />
+	<numplays>2</numplays>							</item>
+		<item objecttype="thing" objectid="259298" subtype="boardgame" collid="82945444">
+	<name sortindex="5">The Ancient World (Second Edition)</name>
+		<yearpublished>2019</yearpublished>			<image>https://cf.geekdo-images.com/xpFKs3YjPxB6rw1uK7Hx0A__original/img/mqLUrPMjQoZ9MpxOSbf2OS2ug08=/0x0/filters:format(jpeg)/pic4286631.jpg</image>
+		<thumbnail>https://cf.geekdo-images.com/xpFKs3YjPxB6rw1uK7Hx0A__small/img/EFrBcvpPonzbiumm3SSgowblzHI=/fit-in/200x150/filters:strip_icc()/pic4286631.jpg</thumbnail>
+		<stats minplayers="2" maxplayers="4" minplaytime="90" maxplaytime="90" playingtime="90" numowned="3182">
+				<rating value="N/A">			<usersrated value="1407" />			<average value="7.49123" />
+			<bayesaverage value="6.24795" />			<stddev value="1.1182" />
+			<median value="0" />			<ranks>
+												<rank type="subtype" id="1" name="boardgame" friendlyname="Board Game Rank" value="2010" bayesaverage="6.24795" />
+																<rank type="family" id="5497" name="strategygames" friendlyname="Strategy Game Rank" value="980" bayesaverage="6.41438" />
+											</ranks>		</rating>
+			</stats>	<status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" lastmodified="2022-01-04 20:12:56" />
+	<numplays>7</numplays>							</item>
+		<item objecttype="thing" objectid="441755" subtype="boardgame" collid="131779594">
+	<name sortindex="1">Apothebakery: Arcane Adventurers</name>
+		<yearpublished>2025</yearpublished>			<image>https://cf.geekdo-images.com/KmqkyTUCzdZC_iAILZ42_g__original/img/3YZZ_b6FfPerOcSmTV5aJCvmVpM=/0x0/filters:format(png)/pic8783624.png</image>
+		<thumbnail>https://cf.geekdo-images.com/KmqkyTUCzdZC_iAILZ42_g__small/img/Bz6J0sYh13jR0eYR3nH6uFgv3MA=/fit-in/200x150/filters:strip_icc()/pic8783624.png</thumbnail>
+		<stats minplayers="1" maxplayers="4" numowned="430">
+				<rating value="N/A">			<usersrated value="28" />			<average value="7.53571" />
+			<bayesaverage value="0" />			<stddev value="1.28124" />
+			<median value="0" />			<ranks>
+												<rank type="subtype" id="1" name="boardgame" friendlyname="Board Game Rank" value="Not Ranked" bayesaverage="Not Ranked" />
+											</ranks>		</rating>
+			</stats>	<status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" lastmodified="2025-04-27 22:49:29" />
+	<numplays>0</numplays>							</item>
+		<item objecttype="thing" objectid="411202" subtype="boardgame" collid="120621504">
+	<name sortindex="1">Apothebakery: The Culinary Alchemists</name>
+		<yearpublished>2025</yearpublished>			<image>https://cf.geekdo-images.com/dXSE2blv9GghQQJUWbDt2g__original/img/9bHVAZanIi7VtSnO7rTSbeESFvY=/0x0/filters:format(jpeg)/pic8650590.jpg</image>
+		<thumbnail>https://cf.geekdo-images.com/dXSE2blv9GghQQJUWbDt2g__small/img/g4V93Z_iw6OMDDILkxEgr7fkpik=/fit-in/200x150/filters:strip_icc()/pic8650590.jpg</thumbnail>
+		<stats minplayers="1" maxplayers="4" minplaytime="60" maxplaytime="90" playingtime="90" numowned="1593">
+				<rating value="N/A">			<usersrated value="439" />			<average value="7.08363" />
+			<bayesaverage value="5.70789" />			<stddev value="1.83834" />
+			<median value="0" />			<ranks>
+												<rank type="subtype" id="1" name="boardgame" friendlyname="Board Game Rank" value="6028" bayesaverage="5.70789" />
+											</ranks>		</rating>
+			</stats>	<status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" lastmodified="2025-04-27 22:48:57" />
+	<numplays>1</numplays>							</item>
+		<item objecttype="thing" objectid="442341" subtype="boardgame" collid="131779599">
+	<name sortindex="1">Apothebakery: The Master Alchemist</name>
+		<yearpublished>2025</yearpublished>			<image>https://cf.geekdo-images.com/mf0M4o5R6qc7-7yxhHMZIA__original/img/Kx4-6ezAViXrGUOXWN-WFjswO9Y=/0x0/filters:format(jpeg)/pic8790003.jpg</image>
+		<thumbnail>https://cf.geekdo-images.com/mf0M4o5R6qc7-7yxhHMZIA__small/img/Nhv_cIxs4G5O7h07b-nejPruzRE=/fit-in/200x150/filters:strip_icc()/pic8790003.jpg</thumbnail>
+		<stats minplayers="1" maxplayers="4" numowned="466">
+				<rating value="N/A">			<usersrated value="23" />			<average value="8.19565" />
+			<bayesaverage value="0" />			<stddev value="1.49448" />
+			<median value="0" />			<ranks>
+												<rank type="subtype" id="1" name="boardgame" friendlyname="Board Game Rank" value="Not Ranked" bayesaverage="Not Ranked" />
+											</ranks>		</rating>
+			</stats>	<status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" lastmodified="2025-04-27 22:49:54" />
+	<numplays>0</numplays>							</item>
+		</items>
