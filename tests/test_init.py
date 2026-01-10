@@ -1,7 +1,7 @@
 """Test BGG Sync setup."""
 from unittest.mock import patch, MagicMock
-from homeassistant.setup import async_setup_component
 from custom_components.bgg_sync.const import DOMAIN
+
 
 async def test_setup_entry(hass):
     """Test setting up the entry."""
@@ -22,7 +22,7 @@ async def test_setup_entry(hass):
     ) as mock_forward:
         # Import the component
         from custom_components.bgg_sync import async_setup_entry
-        
+
         assert await async_setup_entry(hass, entry) is True
         assert DOMAIN in hass.data
         assert entry.entry_id in hass.data[DOMAIN]

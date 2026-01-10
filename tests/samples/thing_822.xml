@@ -2,54 +2,54 @@
 <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse"><item type="boardgame" id="822">
          <thumbnail>https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__small/img/oEEslN-EGqh82sNI6Aj4_MFXYg0=/fit-in/200x150/filters:strip_icc()/pic8621446.jpg</thumbnail>
       <image>https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__original/img/bP18m_PYjyFOv1IBGgMOteQUneA=/0x0/filters:format(jpeg)/pic8621446.jpg</image>
-   	                                  				
+
 				<name type="primary" sortindex="1" value="Carcassonne" />
-			
-						                               				
+
+
 				<name type="alternate" sortindex="1" value="Carcassonne da viaggio" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Carcassonne de voyage" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Carcassonne Jubilee Edition" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Carcassonne: Plus" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Carcassonne: Reiseditie" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Domínio de Carcassonne" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Reise-Carcassonne" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Travel Carcassonne" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Τα Κάστρα του Μυστρά" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Каркасон" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Каркасон" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Каркассон" />
-			    				
+
 				<name type="alternate" sortindex="1" value="Средневековье" />
-			    				
+
 				<name type="alternate" sortindex="1" value="קרקסון" />
-			    				
+
 				<name type="alternate" sortindex="1" value="كاركاسون" />
-			    				
+
 				<name type="alternate" sortindex="1" value="คาร์คาซอนน์" />
-			    				
+
 				<name type="alternate" sortindex="1" value="カルカソンヌ" />
-			    				
+
 				<name type="alternate" sortindex="1" value="カルカソンヌ21" />
-			    				
+
 				<name type="alternate" sortindex="1" value="カルカソンヌＪ" />
-			    				
+
 				<name type="alternate" sortindex="1" value="卡卡頌" />
-			    				
+
 				<name type="alternate" sortindex="1" value="卡卡颂" />
-			    				
+
 				<name type="alternate" sortindex="1" value="카르카손" />
-			
+
 						               													<description>Carcassonne is a tile placement game in which the players draw and place a tile with a piece of southern French landscape represented on it. The tile might feature a city, a road, a cloister, grassland or some combination thereof, and it must be placed adjacent to tiles that have already been played, in such a way that cities are connected to cities, roads to roads, et cetera. Having placed a tile, the player can then decide to place one of their meeples in one of the areas on it: in the city as a knight, on the road as a robber, in the cloister as a monk, or in the field as a farmer. When that area is complete that meeple scores points for its owner.
 
 During a game of Carcassonne, players are faced with decisions like: "Is it really worth putting my last meeple there?" or "Should I use this tile to expand my city, or should I place it near my opponent instead, thus making it a harder for them to complete it and score points?" Since players place only one tile and have the option to place one meeple on it, turns proceed quickly even if it is a game full of options and possibilities.
@@ -61,42 +61,42 @@ First game in the Carcassonne series.
 						               				<minplayers value="2" />
 						               				<maxplayers value="5" />
 						      			<poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="2723">
-			
-		<results numplayers="1">		
+
+		<results numplayers="1">
 					<result value="Best" numvotes="7" />
 					<result value="Recommended" numvotes="80" />
 					<result value="Not Recommended" numvotes="1697" />
-				</results>					
-			
-		<results numplayers="2">		
+				</results>
+
+		<results numplayers="2">
 					<result value="Best" numvotes="1445" />
 					<result value="Recommended" numvotes="974" />
 					<result value="Not Recommended" numvotes="130" />
-				</results>					
-			
-		<results numplayers="3">		
+				</results>
+
+		<results numplayers="3">
 					<result value="Best" numvotes="1210" />
 					<result value="Recommended" numvotes="1172" />
 					<result value="Not Recommended" numvotes="48" />
-				</results>					
-			
-		<results numplayers="4">		
+				</results>
+
+		<results numplayers="4">
 					<result value="Best" numvotes="752" />
 					<result value="Recommended" numvotes="1393" />
 					<result value="Not Recommended" numvotes="194" />
-				</results>					
-			
-		<results numplayers="5">		
+				</results>
+
+		<results numplayers="5">
 					<result value="Best" numvotes="203" />
 					<result value="Recommended" numvotes="1107" />
 					<result value="Not Recommended" numvotes="790" />
-				</results>					
-			
-		<results numplayers="5+">		
+				</results>
+
+		<results numplayers="5+">
 					<result value="Best" numvotes="35" />
 					<result value="Recommended" numvotes="248" />
 					<result value="Not Recommended" numvotes="1407" />
-				</results>					
+				</results>
 	</poll>
 <poll-summary name="suggested_numplayers" title="User Suggested Number of Players">
   <result name="bestwith" value="Best with 2 players" />
@@ -106,7 +106,7 @@ First game in the Carcassonne series.
 						               				<maxplaytime value="45" />
 						               				<minage value="7" />
 						      			<poll name="suggested_playerage" title="User Suggested Player Age" totalvotes="786">
-			<results>		
+			<results>
 					<result value="2" numvotes="2" />
 					<result value="3" numvotes="1" />
 					<result value="4" numvotes="13" />
@@ -119,390 +119,390 @@ First game in the Carcassonne series.
 					<result value="16" numvotes="1" />
 					<result value="18" numvotes="0" />
 					<result value="21 and up" numvotes="0" />
-				</results>					
+				</results>
 	</poll> 			      			<poll name="language_dependence" title="Language Dependence" totalvotes="493">
-			
-		<results>		
+
+		<results>
 					<result level="21" value="No necessary in-game text" numvotes="484" />
 					<result level="22" value="Some necessary text - easily memorized or small crib sheet" numvotes="7" />
 					<result level="23" value="Moderate in-game text - needs crib sheet or paste ups" numvotes="1" />
 					<result level="24" value="Extensive use of text - massive conversion needed to be playable" numvotes="0" />
 					<result level="25" value="Unplayable in another language" numvotes="1" />
-				</results>					
-	</poll> 			      			 			      				
-		 			
+				</results>
+	</poll>
 
-			
-		
+
+
+
 					<link type="boardgamecategory" id="1035" value="Medieval" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamecategory" id="1086" value="Territory Building" />
-		
-									
-			
 
-			      				
-		 			
 
-			
-		
+
+
+
+
+
+
+
 					<link type="boardgamemechanic" id="2080" value="Area Majority / Influence" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamemechanic" id="2043" value="Enclosure" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamemechanic" id="2871" value="Kill Steal" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamemechanic" id="2959" value="Map Addition" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamemechanic" id="2048" value="Pattern Building" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamefamily" id="77906" value="Category: Dized Tutorial" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamefamily" id="67858" value="Cities: Carcassonne (France)" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamefamily" id="79006" value="Components:  Meeples" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamefamily" id="81601" value="Components: Map (Regional scale)" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamefamily" id="68769" value="Components: Wooden pieces &amp; boards" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameexpansion" id="167903" value="20 Jahre Darmstadt Spielt" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameexpansion" id="376556" value="Antwerpen (fan expansion for Carcassonne)" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameexpansion" id="318136" value="Apothecaries (fan expansion for Carcassonne)" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameexpansion" id="248789" value="Apothecaries and Tithes (fan expansion for Carcassonne)" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameexpansion" id="362915" value="Archery Tournament (fan expansion for Carcassonne)" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameaccessory" id="289598" value="The Adults of Carcassonne" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameaccessory" id="323606" value="Carcassonne: 50/100 Scoring Tiles" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameaccessory" id="271421" value="Carcassonne: Broken Token Organizer" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameaccessory" id="274244" value="Carcassonne: Broken Token Organizer – Extra Dividers" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameaccessory" id="308977" value="Carcassonne: e-Raptor Insert" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameintegration" id="45748" value="Carcassonne: Wheel of Fortune" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameintegration" id="358124" value="Mists over Carcassonne" />
-		
-									
-			
 
-			      			
 
-			      				
-		 			
 
-			
-		
+
+
+
+
+
+
+
+
 					<link type="boardgamecompilation" id="142057" value="Carcassonne Big Box" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamecompilation" id="141008" value="Carcassonne Big Box 2" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamecompilation" id="141007" value="Carcassonne Big Box 3" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamecompilation" id="140711" value="Carcassonne Big Box 4" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamecompilation" id="164127" value="Carcassonne Big Box 5" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameimplementation" id="6779" value="The Ark of the Covenant" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameimplementation" id="137492" value="Carcassonne Demo" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameimplementation" id="230751" value="Carcassonne für 2" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameimplementation" id="206940" value="Carcassonne: Amazonas" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameimplementation" id="163370" value="Carcassonne: Gold Rush" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamedesigner" id="398" value="Klaus-Jürgen Wrede" />
-		
-									
-			
 
-			      				
-		 			
 
-			
-		
+
+
+
+
+
+
+
 					<link type="boardgameartist" id="127899" value="Marcel Gröber" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameartist" id="74" value="Doris Matthäus" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameartist" id="43873" value="Anne Pätzke" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameartist" id="14057" value="Chris Quilliams" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgameartist" id="145317" value="Franz-Georg Stämmele" />
-		
-									
-			
 
-			      	      				
-		 			
 
-			
-		
+
+
+
+
+
+
+
 					<link type="boardgamepublisher" id="133" value="Hans im Glück" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamepublisher" id="24874" value="64 Ounce Games" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamepublisher" id="267" value="999 Games" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamepublisher" id="4304" value="Albi" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					<link type="boardgamepublisher" id="7340" value="Astrel Games" />
-		
-									
-				
-		 			
 
-			
-		
+
+
+
+
+
+
 					</item>
 </items>

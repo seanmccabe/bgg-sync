@@ -2,10 +2,12 @@
 import pytest
 from unittest.mock import patch
 
+
 @pytest.fixture(autouse=True)
 async def auto_enable_custom_integrations(enable_custom_integrations):
     """Automatically enable custom integrations for all tests."""
     yield
+
 
 @pytest.fixture
 def mock_setup_entry():
