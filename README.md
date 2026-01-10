@@ -166,6 +166,14 @@ logger:
     custom_components.bgg_sync: debug
 ```
 
+## Future Features (Roadmap)
+
+The following features are planned for upcoming releases:
+*   **"Hotness" Sensor**: Track the top trending games on BoardGameGeek.
+*   **User Stats**: Advanced user metrics including H-Index and Trade Rating.
+
+---
+
 ## Development & Testing
 
 This project includes a comprehensive test suite covering the coordinator, config flow, sensors, and services. We aim for high test coverage (>80%) to ensure reliability.
@@ -186,12 +194,6 @@ To run the tests locally:
     ```bash
     pre-commit run --all-files
     ```
-
-## Future Features (Roadmap)
-
-The following features are planned for upcoming releases:
-*   **"Hotness" Sensor**: Track the top trending games on BoardGameGeek.
-*   **User Stats**: Advanced user metrics including H-Index and Trade Rating.
 
 ---
 
