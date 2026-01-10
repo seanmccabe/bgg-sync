@@ -166,6 +166,27 @@ logger:
     custom_components.bgg_sync: debug
 ```
 
+## Development & Testing
+
+This project includes a comprehensive test suite covering the coordinator, config flow, sensors, and services. We aim for high test coverage (>80%) to ensure reliability.
+
+To run the tests locally:
+
+1.  **Install test dependencies**:
+    ```bash
+    pip install -r requirements_test.txt
+    ```
+
+2.  **Run tests with coverage**:
+    ```bash
+    PYTHONPATH=. pytest --cov=custom_components.bgg_sync --cov-report term-missing tests/
+    ```
+
+3.  **Run pre-commit hooks** (Linting & Formatting):
+    ```bash
+    pre-commit run --all-files
+    ```
+
 ## Future Features (Roadmap)
 
 The following features are planned for upcoming releases:
