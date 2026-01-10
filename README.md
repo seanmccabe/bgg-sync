@@ -1,20 +1,23 @@
-# BoardGameGeek Sync (BGG Sync)
+# <img src="brand_images/icon.png" width="40"/> BoardGameGeek Sync (BGG Sync)
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![GitHub Release][releases-shield]][releases] [![License][license-shield]](LICENSE) [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
-A robust Home Assistant custom integration for verifying and tracking BoardGameGeek (BGG) plays and collection data. It creates sensors for your play counts and collection, and provides a service to record plays directly from Home Assistant.
+BoardGameGeek (BGG) integration for Home Assistant. A robust custom component for verifying and tracking plays and collection data. It creates sensors for your play counts and collection, and provides a service to record plays directly from Home Assistant.
 
 <a href="https://boardgamegeek.com">
-  <img src="https://cf.geekdo-images.com/HZy35cmzmmyV9BarSuk6ug__small/img/gbE7sulIurZE_Tx8EQJXnZSKI6w=/fit-in/200x150/filters:strip_icc()/pic7779581.png" alt="Powered by BoardGameGeek" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand_images/dark_logo.png">
+    <img alt="Powered by BoardGameGeek" src="brand_images/logo.png" width="200">
+  </picture>
 </a>
 
 ## Features
 
 *   **Game Tracking**: Option to track specific games (by ID) to get dedicated sensors with rich metadata (Box Art, Rank, Year, weight and more)!
 *   **Shelf Tracker**: View your full collection as a Home Assistant To-do List.
-*   **Play Recording**: Includes a `bgg_sync.record_play` service to log plays to your BGG account.
+*   **Play Logging**: Includes an action to log plays to your BGG account.
 *   **Multi-User**: Supports tracking multiple BGG accounts.
-*   **Wishlist Monitoring**: Dedicated sensors to track the size of your collection, Owned, Want-to-own, wishlist and more!
+*   **Wishlist Monitoring**: Dedicated sensors to track the size of your collection, Owned, Want-to-own, Wishlist and more!
 *   **Custom Attributes**: Add custom attributes including nfc_tag and music to your sensors to track additional information about your games and create amazing automations.
 *   **Direct API Integration**: Uses the BGG XML API2 directly (no third-party library dependencies) for maximum reliability.
 *   **Authentication Support**: Supports BGG's new API Token requirement for data fetching.
@@ -32,8 +35,6 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
 
 ## Configuration
 
-![Configuration Screenshot Placeholder](https://via.placeholder.com/800x400?text=Configuration+Flow+Screenshot)
-
 1.  Go to **Settings** > **Devices & Services**.
 2.  Click **Add Integration** and search for "BGG Sync".
 3.  Enter your **BGG Username**.
@@ -47,6 +48,8 @@ A robust Home Assistant custom integration for verifying and tracking BoardGameG
 6.  **Password**:
     *   Enter your BGG password. This is ONLY required if "Enable Play Logging" is checked.
 
+![Configuration Screenshot](images/add_integration.jpeg)
+
 IF you want to turn on Collection tracking and not just via the to-do list, you will need to enable the "Track Collection" option.
 
 1.  Go to **Settings** > **Devices & Services**.
@@ -57,19 +60,32 @@ IF you want to turn on Collection tracking and not just via the to-do list, you 
 
 **Note:** Collection tracking can take a few minutes to populate. In large collections this can great hundreds of sensors, so it may take a while and may cause degradation in performance.
 
+![Collection Screenshot](images/options.jpeg)
+
 ## Sensors
 
-![Sensors Screenshot Placeholder](https://via.placeholder.com/800x400?text=Sensors+Example)
+![Sensors Screenshot](images/sensors.jpeg)
 
 The integration creates the following sensors:
 
 *   `sensor.bgg_sync_{username}_plays`: Total number of plays recorded.
-    *   *Attributes*: `last_play_game`, `last_play_date`, `last_play_comment`, `last_play_id`.
+    *   *Attributes*: `last_play` (Object containing: `game`, `game_id`, `date`, `comment`).
 *   `sensor.bgg_sync_{username}_collection`: Total number of games in your collection (owned).
-*   `sensor.{game_name}`: A rich sensor for a specific tracked game.
+*   `sensor.bgg_sync_{username}_{list_type}`: Counts for various lists:
+    *   `owned_boardgames`, `owned_expansions`
+    *   `wishlist`, `want_to_play`, `want_to_buy`, `for_trade`, `preordered`
+*   `sensor.{game_name}` (optional): A rich sensor for a specific tracked game.
     *   **State**: Total Plays.
     *   **Entity Picture**: The authentic game box art from BGG (or your custom override).
-    *   **Attributes**: Multiple attributes including; `rank`, `year`, `weight` (complexity), `playing_time`, `bgg_url`, plus custom `nfc_tag` and `music` attributes that can be added to the game.
+    *   **Attributes**: 
+        *   `bgg_id`, `bgg_url`, `image_url`
+        *   `rank`, `year`, `weight`, `rating`, `bayes_rating`
+        *   `min_players`, `max_players`
+        *   `playing_time`, `min_playtime`, `max_playtime`
+        *   `users_rated`, `owned_by`, `sub_type` (boardgame/expansion)
+        *   `coll_id` (collection ID if owned)
+        *   `nfc_tag` (custom), `music` (custom)
+        *   `custom_image` (functional, overrides entity picture)
 
 ## Services
 
@@ -134,15 +150,14 @@ data:
 ## Troubleshooting
 
 ### Sensors show "Unavailable" or 401 Errors
-Ensure you have provided a valid **API Token**. BGG has tightened security and now requires this token for most XML API requests. Check your configuration via "Configure" in the Integrations page.
+Ensure you have provided a valid **API Token**. BGG has tightened security and requires this token for most XML API requests. Check your configuration via "Configure" in the Integrations page.
 
-### Play Recording fails
+### Play Logging fails
 The integration uses a specialised API login method. If you change your password, you must update it in the integration options. If logs show "Login failed," ensure your credentials are correct.
-
 
 ### Enable Debug Logging
 
-To help troubleshoot issues, you can enable debug logging by adding the following to your `configuration.yaml`:
+To help troubleshoot issues, you can enable debug logging via the **Enable Debug Logging** button on the integration page, or by adding the following to your `configuration.yaml`:
 
 ```yaml
 logger:
@@ -157,7 +172,6 @@ The following features are planned for upcoming releases:
 *   **"Hotness" Sensor**: Track the top trending games on BoardGameGeek.
 *   **User Stats**: Advanced user metrics including H-Index and Trade Rating.
 
-
 ---
 
 ## Disclaimer & Trademarks
@@ -167,3 +181,7 @@ The following features are planned for upcoming releases:
 * **BoardGameGeek** and **BGG** are registered trademarks of BoardGameGeek, LLC.
 * This integration uses the BoardGameGeek XML API2 but is not an official BoardGameGeek product.
 * All board game data and imagery provided through this integration are the property of their respective owners and BoardGameGeek.
+
+[releases-shield]: https://img.shields.io/github/release/seanmccabe/bgg-sync.svg?style=for-the-badge
+[releases]: https://github.com/seanmccabe/bgg-sync/releases
+[license-shield]: https://img.shields.io/github/license/seanmccabe/bgg-sync.svg?style=for-the-badge
