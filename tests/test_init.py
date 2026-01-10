@@ -368,4 +368,26 @@ async def test_reload_entry(hass):
         "homeassistant.config_entries.ConfigEntries.async_reload", return_value=True
     ) as mock_reload:
         await async_reload_entry(hass, entry)
-        assert mock_reload.called
+
+    assert mock_reload.called
+
+
+async def test_service_record_play_exception(hass, caplog):
+    """Test exception handling in record_play service."""
+    from custom_components.bgg_sync import async_record_play_on_bgg
+    import logging
+
+    mock_session = MagicMock()
+    # Simulate an exception when post is called
+    # session.post returns a context manager. __aenter__ triggers the request.
+    post_ctx = AsyncMock()
+    post_ctx.__aenter__.side_effect = Exception("Connection boom")
+    mock_session.post.return_value = post_ctx
+
+    with patch(
+        "custom_components.bgg_sync.async_create_clientsession",
+        return_value=mock_session,
+    ), caplog.at_level(logging.ERROR):
+        await async_record_play_on_bgg(hass, "u", "p", 1, "2022-01-01", 30, "", [])
+
+    assert "Error recording play on BGG" in caplog.text

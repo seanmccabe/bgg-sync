@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -57,6 +57,7 @@ async def async_setup_entry(
         BggCollectionCountSensor(
             coordinator, "preordered", "Preordered", "mdi:clock-outline"
         ),
+        BggLastSyncSensor(coordinator),
     ]
 
     # Parse game data from options
@@ -179,6 +180,25 @@ class BggCollectionCountSensor(BggBaseSensor):
     def native_value(self) -> int:
         """Return the count."""
         return self.coordinator.data.get("counts", {}).get(self.key, 0)
+
+
+class BggLastSyncSensor(BggBaseSensor):
+    """Diagnostic sensor for last successful BGG sync."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:clock-check-outline"
+
+    def __init__(self, coordinator: BggDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.username}_last_sync"
+        self._attr_name = "Last Sync"
+
+    @property
+    def native_value(self):
+        """Return the last sync timestamp."""
+        return self.coordinator.data.get("last_sync")
 
 
 class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):

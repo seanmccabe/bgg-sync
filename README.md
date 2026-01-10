@@ -1,6 +1,6 @@
 # <img src="brand_images/icon.png" width="40"/> BoardGameGeek Sync (BGG Sync)
 
-[![GitHub Release][releases-shield]][releases] [![License][license-shield]](LICENSE) [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration) ![Tests](https://github.com/seanmccabe/bgg-sync/actions/workflows/tests.yaml/badge.svg)
+[![GitHub Release][releases-shield]][releases] [![License][license-shield]](LICENSE) [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration) [![Tests](https://img.shields.io/github/actions/workflow/status/seanmccabe/bgg-sync/tests.yaml?style=for-the-badge)](https://github.com/seanmccabe/bgg-sync/actions/workflows/tests.yaml)
 
 BoardGameGeek (BGG) integration for Home Assistant. A robust custom component for verifying and tracking plays and collection data. It creates sensors for your play counts and collection, and provides a service to record plays directly from Home Assistant.
 
