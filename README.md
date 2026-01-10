@@ -176,7 +176,7 @@ The following features are planned for upcoming releases:
 
 ## Development & Testing
 
-This project includes a comprehensive test suite covering the coordinator, config flow, sensors, and services. We aim for high test coverage (>80%) to ensure reliability.
+This project includes a comprehensive test suite covering the coordinator, config flow, sensors, and services. We aim for high test coverage (100%) to ensure reliability.
 
 To run the tests locally:
 

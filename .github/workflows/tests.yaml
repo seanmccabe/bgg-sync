@@ -24,4 +24,4 @@ jobs:
           # Pytest needs to know where to find them.
       - name: Run tests
         run: |
-          pytest tests
+          PYTHONPATH=. pytest tests
