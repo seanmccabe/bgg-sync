@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - **API Performance**: Optimized batch sizing (reduced to 20) for BGG API requests to prevent "400 Bad Request" errors on large collections.
 - **Translations**: Improved UI labels for configuration options.
 - **Attributes**: Renamed `subtype` to `sub_type` and fixed `coll_id` to only appear when relevant.
+- **Reliability**: Achieved 100% test coverage and implemented strict linting (ruff) to ensure robustness and code quality.
 
 ### Fixed
 - Fixed issue where game attributes (Weight, Rating, etc.) were showing as "Unknown" due to XML parsing errors.
