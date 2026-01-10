@@ -10,17 +10,28 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import DOMAIN, CONF_BGG_USERNAME, CONF_BGG_PASSWORD, CONF_API_TOKEN, CONF_GAMES, BASE_URL, CONF_ENABLE_LOGGING
+from .const import (
+    DOMAIN,
+    CONF_BGG_USERNAME,
+    CONF_BGG_PASSWORD,
+    CONF_API_TOKEN,
+    CONF_GAMES,
+    BASE_URL,
+    CONF_ENABLE_LOGGING,
+    CONF_IMPORT_COLLECTION,
+    CONF_ENABLE_SHELF_TODO,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
+
 def validate_input(data: dict[str, Any]) -> dict[str, str]:
     """Validate the user input allows us to connect.
-    
+
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
     errors = {}
-    
+
     # Check if password is provided when logging is enabled
     if data.get(CONF_ENABLE_LOGGING) and not data.get(CONF_BGG_PASSWORD):
         errors[CONF_BGG_PASSWORD] = "password_required_for_logging"
@@ -29,18 +40,18 @@ def validate_input(data: dict[str, Any]) -> dict[str, str]:
     # Use the username to fetch collection, which is a standard authenticated read
     username = data[CONF_BGG_USERNAME]
     token = data[CONF_API_TOKEN].strip()
-    
+
     # We use a known endpoint that requires auth or we just test general connectivity
     # /collection requires auth if we want private info, but we can just test if the token is accepted
     # Actually, getting the collection for the username is a good test.
     url = f"{BASE_URL}/collection?username={username}&brief=1"
-    
-    # If the token is invalid, BGG might return 200 OK but with an error message in XML, 
-    # or just work. However, BGG often just works publicly. 
-    # A better test for the TOKEN specifically is strict. 
-    # But let's assume if we get a 200, we are "connected". 
+
+    # If the token is invalid, BGG might return 200 OK but with an error message in XML,
+    # or just work. However, BGG often just works publicly.
+    # A better test for the TOKEN specifically is strict.
+    # But let's assume if we get a 200, we are "connected".
     # To strictly test the token, let's trust the user or check if 401 is returned.
-    
+
     try:
         # We must ignore self-signed certs or verify? requests verifies by default.
         # Adding timeout is good practice.
@@ -52,11 +63,14 @@ def validate_input(data: dict[str, Any]) -> dict[str, str]:
         elif response.status_code not in (200, 202):
             errors["base"] = "cannot_connect"
         elif response.status_code == 202:
-            _LOGGER.warning("BGG returned 202 Accepted. Your collection is being processed and may take some time to appear.")
+            _LOGGER.warning(
+                "BGG returned 202 Accepted. Your collection is being processed and may take some time to appear."
+            )
     except Exception:
         errors["base"] = "cannot_connect"
 
     return errors
+
 
 class BggSyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for BGG Sync."""
@@ -70,23 +84,25 @@ class BggSyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             # Validate!
-            errors = await self.hass.async_add_executor_job(
-                validate_input, user_input
-            )
+            errors = await self.hass.async_add_executor_job(validate_input, user_input)
 
             if not errors:
-                return self.async_create_entry(title=user_input[CONF_BGG_USERNAME], data=user_input)
+                return self.async_create_entry(
+                    title=user_input[CONF_BGG_USERNAME], data=user_input
+                )
 
         return self.async_show_form(
-            step_id="user", 
-            data_schema=vol.Schema({
-                vol.Required(CONF_BGG_USERNAME): str,
-                vol.Required(CONF_API_TOKEN): str,
-                vol.Optional(CONF_ENABLE_LOGGING, default=False): bool,
-                vol.Optional(CONF_BGG_PASSWORD): str,
-                vol.Optional(CONF_GAMES): str,
-            }), 
-            errors=errors
+            step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_BGG_USERNAME): str,
+                    vol.Required(CONF_API_TOKEN): str,
+                    vol.Optional(CONF_ENABLE_LOGGING, default=False): bool,
+                    vol.Optional(CONF_BGG_PASSWORD): str,
+                    vol.Optional(CONF_GAMES): str,
+                }
+            ),
+            errors=errors,
         )
 
     @staticmethod
@@ -97,8 +113,10 @@ class BggSyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get the options flow for this handler."""
         return BggOptionsFlowHandler()
 
+
 class BggOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for BGG Sync."""
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -107,9 +125,7 @@ class BggOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             # We need the username for validation, which is immutable in data
             full_input = {**self.config_entry.data, **user_input}
-            errors = await self.hass.async_add_executor_job(
-                validate_input, full_input
-            )
+            errors = await self.hass.async_add_executor_job(validate_input, full_input)
 
             if not errors:
                 return self.async_create_entry(title="", data=user_input)
@@ -121,19 +137,34 @@ class BggOptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_API_TOKEN,
                         default=self.config_entry.options.get(
-                            CONF_API_TOKEN, self.config_entry.data.get(CONF_API_TOKEN, "")
+                            CONF_API_TOKEN,
+                            self.config_entry.data.get(CONF_API_TOKEN, ""),
                         ),
                     ): str,
                     vol.Optional(
                         CONF_ENABLE_LOGGING,
                         default=self.config_entry.options.get(
-                            CONF_ENABLE_LOGGING, self.config_entry.data.get(CONF_ENABLE_LOGGING, False)
+                            CONF_ENABLE_LOGGING,
+                            self.config_entry.data.get(CONF_ENABLE_LOGGING, False),
+                        ),
+                    ): bool,
+                    vol.Optional(
+                        CONF_IMPORT_COLLECTION,
+                        default=self.config_entry.options.get(
+                            CONF_IMPORT_COLLECTION, False
+                        ),
+                    ): bool,
+                    vol.Optional(
+                        CONF_ENABLE_SHELF_TODO,
+                        default=self.config_entry.options.get(
+                            CONF_ENABLE_SHELF_TODO, True
                         ),
                     ): bool,
                     vol.Optional(
                         CONF_BGG_PASSWORD,
                         default=self.config_entry.options.get(
-                            CONF_BGG_PASSWORD, self.config_entry.data.get(CONF_BGG_PASSWORD, "")
+                            CONF_BGG_PASSWORD,
+                            self.config_entry.data.get(CONF_BGG_PASSWORD, ""),
                         ),
                     ): str,
                     vol.Optional(
@@ -144,5 +175,5 @@ class BggOptionsFlowHandler(config_entries.OptionsFlow):
                     ): str,
                 }
             ),
-            errors=errors
+            errors=errors,
         )

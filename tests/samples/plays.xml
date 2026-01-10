@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plays username="seanmccabe" userid="2788873" total="5" page="1" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+<play id="108718559" date="2026-01-10" quantity="1" length="24" incomplete="0" nowinstats="0" location="Home">
+			<item name="Twisted Cryptids" objecttype="thing" objectid="429840">
+				<subtypes>
+										<subtype value="boardgame" />
+									</subtypes>
+			</item>
+						<comments>Played with expansions:
+- [thing=429841]Twisted Cryptids: Ness Is More[/thing]</comments>
+									<players>
+									<player username="kellymccabe" userid="2799379" name="Kelly" startposition="" color="" score="33" new="0" rating="0" win="1" />
+						<player username="seanmccabe" userid="2788873" name="Seán" startposition="start player" color="" score="22" new="0" rating="0" win="0" />
+						</players>
+					</play>
+	<play id="108716676" date="2026-01-10" quantity="1" length="0" incomplete="0" nowinstats="0" location="Home">
+			<item name="Twisted Cryptids" objecttype="thing" objectid="429840">
+				<subtypes>
+										<subtype value="boardgame" />
+									</subtypes>
+			</item>
+									<players>
+									<player username="kellymccabe" userid="2799379" name="Kelly" startposition="start player" color="" score="53" new="0" rating="0" win="1" />
+						<player username="seanmccabe" userid="2788873" name="Seán" startposition="" color="" score="44" new="0" rating="0" win="0" />
+						</players>
+					</play>
+	<play id="108715450" date="2026-01-10" quantity="1" length="0" incomplete="0" nowinstats="0" location="Home">
+			<item name="Twisted Cryptids" objecttype="thing" objectid="429840">
+				<subtypes>
+										<subtype value="boardgame" />
+									</subtypes>
+			</item>
+									<players>
+									<player username="kellymccabe" userid="2799379" name="Kelly" startposition="" color="" score="13" new="1" rating="0" win="0" />
+						<player username="seanmccabe" userid="2788873" name="Seán" startposition="" color="" score="34" new="0" rating="0" win="1" />
+						</players>
+					</play>
+	<play id="108638791" date="2026-01-08" quantity="1" length="0" incomplete="0" nowinstats="0" location="Home">
+			<item name="The Curse of the Maldita Diamond" objecttype="thing" objectid="326908">
+				<subtypes>
+										<subtype value="boardgame" />
+									</subtypes>
+			</item>
+									<players>
+									<player username="" userid="0" name="Finn" startposition="" color="" score="45" new="1" rating="0" win="0" />
+						<player username="kellymccabe" userid="2799379" name="Kelly" startposition="" color="" score="60" new="1" rating="0" win="1" />
+						<player username="seanmccabe" userid="2788873" name="Seán" startposition="" color="" score="24" new="1" rating="0" win="0" />
+						</players>
+					</play>
+	<play id="108620909" date="2026-01-08" quantity="1" length="0" incomplete="0" nowinstats="0" location="Home">
+			<item name="Flip 7" objecttype="thing" objectid="420087">
+				<subtypes>
+										<subtype value="boardgame" />
+									</subtypes>
+			</item>
+									<players>
+									<player username="" userid="0" name="Finn" startposition="" color="" score="284" new="0" rating="0" win="1" />
+						<player username="" userid="0" name="Kit" startposition="" color="" score="54" new="0" rating="0" win="0" />
+						</players>
+					</play>
+	</plays>

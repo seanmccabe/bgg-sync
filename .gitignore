@@ -33,3 +33,15 @@ deps/
 
 # Logs
 *.log
+
+# Environments
+venv/
+.env
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Linters
+.ruff_cache/

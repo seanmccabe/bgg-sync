@@ -7,7 +7,7 @@
                     "bgg_username": "BoardGameGeek Username",
                     "bgg_password": "BGG Password (required for logging plays)",
                     "bgg_api_token": "BGG API Token (Required)",
-                    "games": "Board Games (comma separated IDs, e.g. 822 for Carcassonne)",
+                    "games": "Track Additional Games (Not in Collection, comma separated IDs, e.g. 822 for Carcassonne)",
                     "enable_logging": "Enable Play Logging?"
                 }
             }
@@ -28,7 +28,10 @@
                 "data": {
                     "bgg_password": "BGG Password (required for logging plays)",
                     "bgg_api_token": "BGG API Token (Required)",
-                    "games": "Board Games (comma separated IDs)"
+                    "games": "Track Additional Games (Not in Collection, comma separated IDs)",
+                    "import_collection": "Track Collection",
+                    "enable_shelf_todo": "Enable Shelf Todo List",
+                    "enable_logging": "Enable Play Logging (Requires Password)"
                 }
             }
         }
