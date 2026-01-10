@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0-beta.2] - 2026-01-10
+
+### Changed
+- **Last Sync Sensor:** Added a diagnostic sensor (`bgg_last_sync`) to track the timestamp of the last successful data fetch.
+- **Asyncio Migration:** Fully migrated network calls to `aiohttp` to prevent thread blocking.
+- **Dependencies:** Removed `requests` dependency.
+
 ## [1.1.0] - 2026-01-10
 
 ### Added

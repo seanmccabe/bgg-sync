@@ -22,8 +22,8 @@ from .const import (
     CONF_ENABLE_LOGGING,
     BGG_URL,
 )
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from .coordinator import BggDataUpdateCoordinator
-import requests
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -105,8 +105,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 )
                 return
 
-            await hass.async_add_executor_job(
-                record_play_on_bgg,
+            await async_record_play_on_bgg(
+                hass,
                 username,
                 password,
                 game_id,
@@ -177,73 +177,78 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         hass.services.async_register(DOMAIN, SERVICE_TRACK_GAME, async_track_game)
 
 
-def record_play_on_bgg(username, password, game_id, date, length, comments, players):
-    """BGG play recording logic using requests."""
+async def async_record_play_on_bgg(
+    hass, username, password, game_id, date, length, comments, players
+):
+    """BGG play recording logic using aiohttp."""
     # BGG uses a login process then a post to geekplay.php
-    session = requests.Session()
-    session.headers.update(
-        {
+    # We use a local session (via async_create_clientsession) to keep cookies isolated (PHP session) and ensure we don't leak auth.
+    async with async_create_clientsession(hass) as session:
+        headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Referer": f"{BGG_URL}/login",
         }
-    )
 
-    login_url = f"{BGG_URL}/login/api/v1"
-    login_payload = {"credentials": {"username": username, "password": password}}
+        login_url = f"{BGG_URL}/login/api/v1"
+        login_payload = {"credentials": {"username": username, "password": password}}
 
-    try:
-        # We must use json=login_payload so requests sets Content-Type: application/json
-        response = session.post(login_url, json=login_payload, timeout=10)
+        try:
+            # We must use json=login_payload so requests sets Content-Type: application/json
+            async with session.post(
+                login_url, json=login_payload, headers=headers, timeout=10
+            ) as response:
+                # API v1 usually returns 200 or 204 on success.
+                # If it fails, it might return 400/401.
+                if response.status not in [200, 204]:
+                    _LOGGER.error(
+                        "BGG Login failed for %s. Status: %s, Body: %s",
+                        username,
+                        response.status,
+                        await response.text(),
+                    )
+                    return
 
-        # API v1 usually returns 200 or 204 on success.
-        # If it fails, it might return 400/401.
-        if response.status_code not in [200, 204]:
-            _LOGGER.error(
-                "BGG Login failed for %s. Status: %s, Body: %s",
-                username,
-                response.status_code,
-                response.text,
-            )
-            return
+            play_url = f"{BGG_URL}/geekplay.php"
+            # BGG Play data format is complex, often involves XML or specific form fields.
+            # This is a simplified version; in a real library it would be more robust.
+            # Most BGG play loggers use the PHP endpoint.
+            if not date:
+                from datetime import datetime
 
-        play_url = f"{BGG_URL}/geekplay.php"
-        # BGG Play data format is complex, often involves XML or specific form fields.
-        # This is a simplified version; in a real library it would be more robust.
-        # Most BGG play loggers use the PHP endpoint.
-        if not date:
-            from datetime import datetime
+                date = datetime.now().strftime("%Y-%m-%d")
 
-            date = datetime.now().strftime("%Y-%m-%d")
+            data = {
+                "action": "save",
+                "objectid": game_id,
+                "objecttype": "thing",
+                "playdate": date,
+                "length": length or "",
+                "comments": comments or "",
+                "ajax": 1,
+            }
+            # Add players if provided
+            # This part is highly dependent on BGG's internal form structure.
 
-        data = {
-            "action": "save",
-            "objectid": game_id,
-            "objecttype": "thing",
-            "playdate": date,
-            "length": length or "",
-            "comments": comments or "",
-            "ajax": 1,
-        }
-        # Add players if provided
-        # This part is highly dependent on BGG's internal form structure.
+            # Update Referer for the play post
+            headers["Referer"] = f"{BGG_URL}/boardgame/{game_id}"
 
-        # Update Referer for the play post
-        session.headers.update({"Referer": f"{BGG_URL}/boardgame/{game_id}"})
+            async with session.post(
+                play_url, data=data, headers=headers, timeout=10
+            ) as resp:
+                text = await resp.text()
+                _LOGGER.debug(
+                    "Record Play Response Code: %s | Body: %s",
+                    resp.status,
+                    text[:1000],
+                )
 
-        resp = session.post(play_url, data=data, timeout=10)
-        _LOGGER.debug(
-            "Record Play Response Code: %s | Body: %s",
-            resp.status_code,
-            resp.text[:1000],
-        )
+                if resp.status == 200 and "error" not in text.lower():
+                    _LOGGER.info("Successfully recorded play for %s on BGG", username)
+                else:
+                    _LOGGER.error("Failed to record play on BGG: %s", text)
 
-        if resp.status_code == 200 and "error" not in resp.text.lower():
-            _LOGGER.info("Successfully recorded play for %s on BGG", username)
-        else:
-            _LOGGER.error("Failed to record play on BGG: %s", resp.text)
-
-    except Exception as err:
-        _LOGGER.error("Error recording play on BGG: %s", err)
+        except Exception as err:
+            _LOGGER.error("Error recording play on BGG: %s", err)
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:

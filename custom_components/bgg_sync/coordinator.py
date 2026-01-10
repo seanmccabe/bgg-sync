@@ -2,7 +2,7 @@ import logging
 import xml.etree.ElementTree as ET
 from datetime import timedelta
 
-import requests
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -33,7 +33,10 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         self.password = password
         self.api_token = api_token
         self.game_ids = game_ids
-        self.session = requests.Session()
+        self.username = username
+        self.password = password
+        self.api_token = api_token
+        self.game_ids = game_ids
         self.logged_in = False
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
@@ -42,7 +45,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         if self.api_token:
             self.headers["Authorization"] = f"Bearer {self.api_token}"
 
-    def _login(self):
+    async def _login(self):
         """Login to BGG if password is provided and we don't have an API token."""
         # If we have an API token, we don't likely need website session login for FETCHING data.
         # But we might need it for recording plays if we implement that via website scraping.
@@ -54,14 +57,15 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         login_data = {"username": self.username, "password": self.password}
 
         try:
-            resp = self.session.post(login_url, data=login_data, timeout=10)
-            _LOGGER.debug(
-                "Login attempt for %s: %s | Body: %s",
-                self.username,
-                resp.status_code,
-                resp.text[:200],
-            )
-            self.logged_in = True
+            session = async_get_clientsession(self.hass)
+            async with session.post(login_url, data=login_data, timeout=10) as resp:
+                _LOGGER.debug(
+                    "Login attempt for %s: %s | Body: %s",
+                    self.username,
+                    resp.status,
+                    (await resp.text())[:200],
+                )
+                self.logged_in = True
         except Exception as err:
             _LOGGER.error("Login failed for %s: %s", self.username, err)
 
@@ -71,7 +75,9 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         # The docs say token is REQUIRED. So relying on password alone is deprecated/broken.
         # But we'll leave the logic in case it helps for some users or endpoints.
         if self.password and not self.logged_in and not self.api_token:
-            await self.hass.async_add_executor_job(self._login)
+            await self._login()
+
+        session = async_get_clientsession(self.hass)
 
         try:
             data = {
@@ -83,45 +89,47 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
             # 1. Fetch Plays (Total and Last Play)
             plays_url = f"{BASE_URL}/plays?username={self.username}"
-            resp = await self.hass.async_add_executor_job(
-                lambda: self.session.get(plays_url, headers=self.headers, timeout=10)
-            )
-            # Log simplified response status
-            _LOGGER.debug(
-                "Plays API response for %s: %s", self.username, resp.status_code
-            )
 
-            if resp.status_code == 200:
-                root = ET.fromstring(resp.content)
-                data["total_plays"] = int(root.get("total", 0))
+            async with session.get(plays_url, headers=self.headers, timeout=10) as resp:
+                # Log simplified response status
+                _LOGGER.debug(
+                    "Plays API response for %s: %s", self.username, resp.status
+                )
 
-                # Get last play details
-                play_nodes = root.findall("play")
-                if play_nodes:
-                    last_play = play_nodes[0]
-                    item = last_play.find("item")
-                    data["last_play"] = {
-                        "game": item.get("name") if item is not None else "Unknown",
-                        "game_id": item.get("objectid") if item is not None else None,
-                        "date": last_play.get("date"),
-                        "comment": last_play.findtext("comments", ""),
-                    }
-            elif resp.status_code == 202:
-                _LOGGER.info(
-                    "BGG is generating play data for %s, will try again next poll",
-                    self.username,
-                )
-            elif resp.status_code == 401:
-                _LOGGER.error(
-                    "BGG API 401 Unauthorised for %s. Ensure you have a valid API Token configured.",
-                    self.username,
-                )
-            else:
-                _LOGGER.warning(
-                    "Plays API returned status %s for %s",
-                    resp.status_code,
-                    self.username,
-                )
+                if resp.status == 200:
+                    text = await resp.text()
+                    root = await self.hass.async_add_executor_job(ET.fromstring, text)
+                    data["total_plays"] = int(root.get("total", 0))
+
+                    # Get last play details
+                    play_nodes = root.findall("play")
+                    if play_nodes:
+                        last_play = play_nodes[0]
+                        item = last_play.find("item")
+                        data["last_play"] = {
+                            "game": item.get("name") if item is not None else "Unknown",
+                            "game_id": item.get("objectid")
+                            if item is not None
+                            else None,
+                            "date": last_play.get("date"),
+                            "comment": last_play.findtext("comments", ""),
+                        }
+                elif resp.status == 202:
+                    _LOGGER.info(
+                        "BGG is generating play data for %s, will try again next poll",
+                        self.username,
+                    )
+                elif resp.status == 401:
+                    _LOGGER.error(
+                        "BGG API 401 Unauthorised for %s. Ensure you have a valid API Token configured.",
+                        self.username,
+                    )
+                else:
+                    _LOGGER.warning(
+                        "Plays API returned status %s for %s",
+                        resp.status,
+                        self.username,
+                    )
 
             # 2. Fetch Collection (Games AND Expansions)
             # BGG API defaults to only returning boardgames if no subtype is specified.
@@ -131,34 +139,37 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
             for subtype in ["boardgame", "boardgameexpansion"]:
                 coll_url = f"{BASE_URL}/collection?username={self.username}&subtype={subtype}&stats=1"
-                resp = await self.hass.async_add_executor_job(
-                    lambda: self.session.get(coll_url, headers=self.headers, timeout=60)
-                )
 
-                if resp.status_code == 200:
-                    root = ET.fromstring(resp.content)
-                    if root.tag != "message":
-                        items = root.findall("item")
-                        all_items.extend(items)
-                    else:
+                async with session.get(
+                    coll_url, headers=self.headers, timeout=60
+                ) as resp:
+                    if resp.status == 200:
+                        text = await resp.text()
+                        root = await self.hass.async_add_executor_job(
+                            ET.fromstring, text
+                        )
+                        if root.tag != "message":
+                            items = root.findall("item")
+                            all_items.extend(items)
+                        else:
+                            _LOGGER.info(
+                                "BGG is (202) processing collection for %s (%s), will try again next poll",
+                                self.username,
+                                subtype,
+                            )
+                    elif resp.status == 202:
                         _LOGGER.info(
-                            "BGG is (202) processing collection for %s (%s), will try again next poll",
+                            "BGG is (202) generating collection data for %s (%s)",
                             self.username,
                             subtype,
                         )
-                elif resp.status_code == 202:
-                    _LOGGER.info(
-                        "BGG is (202) generating collection data for %s (%s)",
-                        self.username,
-                        subtype,
-                    )
-                else:
-                    _LOGGER.warning(
-                        "Collection API returned status %s for %s (%s)",
-                        resp.status_code,
-                        self.username,
-                        subtype,
-                    )
+                    else:
+                        _LOGGER.warning(
+                            "Collection API returned status %s for %s (%s)",
+                            resp.status,
+                            self.username,
+                            subtype,
+                        )
 
             data["collection"] = {}
             data["game_details"] = {}
@@ -302,12 +313,15 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 game_url = (
                     f"{BASE_URL}/plays?username={self.username}&id={game_id}&type=thing"
                 )
-                resp = await self.hass.async_add_executor_job(
-                    lambda: self.session.get(game_url, headers=self.headers, timeout=10)
-                )
-                if resp.status_code == 200:
-                    root = ET.fromstring(resp.content)
-                    data["game_plays"][game_id] = int(root.get("total", 0))
+                async with session.get(
+                    game_url, headers=self.headers, timeout=10
+                ) as resp:
+                    if resp.status == 200:
+                        text = await resp.text()
+                        root = await self.hass.async_add_executor_job(
+                            ET.fromstring, text
+                        )
+                        data["game_plays"][game_id] = int(root.get("total", 0))
 
             # 4. Fetch Rich Game Details for ALL games (Collection + Tracked)
             # Combine IDs from collection and explicit tracking
@@ -330,23 +344,23 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 thing_url = f"{BASE_URL}/thing?id={ids_str}&stats=1"
                 _LOGGER.debug("Requesting batch %d: %s", i, thing_url)
 
-                resp = await self.hass.async_add_executor_job(
-                    lambda: self.session.get(
-                        thing_url, headers=self.headers, timeout=30
-                    )
-                )
+                async with session.get(
+                    thing_url, headers=self.headers, timeout=30
+                ) as resp:
+                    if resp.status != 200:
+                        _LOGGER.warning(
+                            "Thing API failed for batch starting at index %s. Status: %s",
+                            i,
+                            resp.status,
+                        )
+                        continue
 
-                if resp.status_code != 200:
-                    _LOGGER.warning(
-                        "Thing API failed for batch starting at index %s. Status: %s",
-                        i,
-                        resp.status_code,
-                    )
-                    continue
-
-                if resp.status_code == 200:
+                    # If status is 200, parse content
+                    text = await resp.text()
                     try:
-                        root = ET.fromstring(resp.content)
+                        root = await self.hass.async_add_executor_job(
+                            ET.fromstring, text
+                        )
                         for item in root.findall("item"):
                             try:
                                 g_id = int(item.get("id"))

@@ -5,6 +5,7 @@ from custom_components.bgg_sync.sensor import (
     BggCollectionSensor,
     BggGameSensor,
     BggCollectionCountSensor,
+    BggLastSyncSensor,
 )
 from custom_components.bgg_sync.const import (
     CONF_NFC_TAG,
@@ -39,7 +40,25 @@ async def test_sensor_setup(hass):
     plays_sensor = BggPlaysSensor(coordinator)
     assert plays_sensor.state == 100
     assert plays_sensor.extra_state_attributes[ATTR_LAST_PLAY]["game"] == "Catan"
+    assert plays_sensor.extra_state_attributes[ATTR_LAST_PLAY]["game"] == "Catan"
     assert plays_sensor.icon == "mdi:dice-multiple"
+
+    # 1.5 BggLastSyncSensor
+    last_sync_sensor = BggLastSyncSensor(coordinator)
+    assert last_sync_sensor.native_value is None  # Initially None if not set
+    assert last_sync_sensor.icon == "mdi:clock-check-outline"
+    assert last_sync_sensor.device_class == "timestamp"
+    # entity_category is "diagnostic" but that's an entity property, not easily mockable unless we check class attr
+    from homeassistant.helpers.entity import EntityCategory
+
+    assert last_sync_sensor.entity_category == EntityCategory.DIAGNOSTIC
+
+    # Simulate sync update
+    from datetime import datetime
+
+    now = datetime.now()
+    coordinator.data["last_sync"] = now
+    assert last_sync_sensor.native_value == now
 
     # 2. BggCollectionSensor
     coll_sensor = BggCollectionSensor(coordinator)

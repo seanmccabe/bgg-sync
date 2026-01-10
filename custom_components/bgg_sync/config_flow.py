@@ -4,10 +4,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import requests
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
@@ -25,7 +25,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-def validate_input(data: dict[str, Any]) -> dict[str, str]:
+async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
@@ -55,17 +55,18 @@ def validate_input(data: dict[str, Any]) -> dict[str, str]:
     try:
         # We must ignore self-signed certs or verify? requests verifies by default.
         # Adding timeout is good practice.
+        session = async_get_clientsession(hass)
         headers = {"Authorization": f"Bearer {token}"}
-        response = requests.get(url, headers=headers, timeout=10)
-        # BGG returns 200 even for errors sometimes, but 401/403 for bad auth if enforced.
-        if response.status_code == 401:
-            errors[CONF_API_TOKEN] = "invalid_auth"
-        elif response.status_code not in (200, 202):
-            errors["base"] = "cannot_connect"
-        elif response.status_code == 202:
-            _LOGGER.warning(
-                "BGG returned 202 Accepted. Your collection is being processed and may take some time to appear."
-            )
+        async with session.get(url, headers=headers, timeout=10) as response:
+            # BGG returns 200 even for errors sometimes, but 401/403 for bad auth if enforced.
+            if response.status == 401:
+                errors[CONF_API_TOKEN] = "invalid_auth"
+            elif response.status not in (200, 202):
+                errors["base"] = "cannot_connect"
+            elif response.status == 202:
+                _LOGGER.warning(
+                    "BGG returned 202 Accepted. Your collection is being processed and may take some time to appear."
+                )
     except Exception:
         errors["base"] = "cannot_connect"
 
@@ -84,7 +85,7 @@ class BggSyncConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             # Validate!
-            errors = await self.hass.async_add_executor_job(validate_input, user_input)
+            errors = await validate_input(self.hass, user_input)
 
             if not errors:
                 return self.async_create_entry(
@@ -125,7 +126,7 @@ class BggOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             # We need the username for validation, which is immutable in data
             full_input = {**self.config_entry.data, **user_input}
-            errors = await self.hass.async_add_executor_job(validate_input, full_input)
+            errors = await validate_input(self.hass, full_input)
 
             if not errors:
                 return self.async_create_entry(title="", data=user_input)
