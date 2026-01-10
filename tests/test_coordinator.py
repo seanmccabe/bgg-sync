@@ -526,5 +526,3 @@ async def test_coordinator_full_counts(hass):
     assert c["preordered"] == 1
 
     await hass.async_block_till_done()
-
-
