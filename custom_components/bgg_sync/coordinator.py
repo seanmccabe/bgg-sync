@@ -282,9 +282,6 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                         if is_owned:
                             data["collection"][g_id] = game_obj
 
-                        # Always populate game_details so we have data for plays/tracking even if not owned (e.g. wishlist game tracked)
-                        if "game_details" not in data:
-                            data["game_details"] = {}
                         data["game_details"][g_id] = game_obj
 
                         # Also populate play count even if not owned (you can record plays for friends' games)
@@ -328,8 +325,6 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
             for i in range(0, len(all_ids_list), BATCH_SIZE):
                 batch_ids = all_ids_list[i : i + BATCH_SIZE]
-                if not batch_ids:
-                    continue
 
                 ids_str = ",".join(map(str, batch_ids))
                 thing_url = f"{BASE_URL}/thing?id={ids_str}&stats=1"

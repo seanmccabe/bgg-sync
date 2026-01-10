@@ -1,7 +1,13 @@
 """Test BGG Sync config flow."""
+import logging
 from unittest.mock import patch
 from homeassistant import config_entries, setup
-from custom_components.bgg_sync.const import DOMAIN, CONF_API_TOKEN, CONF_BGG_USERNAME
+from custom_components.bgg_sync.const import (
+    DOMAIN,
+    CONF_API_TOKEN,
+    CONF_BGG_USERNAME,
+    CONF_BGG_PASSWORD,
+)
 
 
 async def test_config_flow(hass):
@@ -78,6 +84,75 @@ async def test_flow_validation_cannot_connect(hass):
 
     assert result2["type"] == "form"
     assert result2["errors"] == {"base": "cannot_connect"}
+
+
+async def test_flow_validation_http_error(hass):
+    """Test HTTP error (500) returns cannot_connect."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+
+    with patch("requests.get") as mock_get:
+        mock_get.return_value.status_code = 500
+        mock_get.return_value.text = "Server Error"
+
+        result2 = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                "bgg_username": "test_user",
+                "bgg_api_token": "token",
+            },
+        )
+
+    assert result2["type"] == "form"
+    assert result2["errors"] == {"base": "cannot_connect"}
+
+
+async def test_flow_validation_password_required_logging(hass):
+    """Test password is required if logging is enabled."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+
+    # We must patch requests.get to succeed (200) so that ONLY the password error is generated
+    # If requests fails, we'd get 'cannot_connect' as well.
+    with patch("requests.get") as mock_get:
+        mock_get.return_value.status_code = 200
+
+        result2 = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                "bgg_username": "test_user",
+                "bgg_api_token": "token",
+                "enable_logging": True,
+                # No password provided
+            },
+        )
+
+    assert result2["type"] == "form"
+    assert result2["errors"] == {CONF_BGG_PASSWORD: "password_required_for_logging"}
+
+
+async def test_flow_warning_202(hass, caplog):
+    """Test 202 response returns success but logs warning."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+
+    with patch("requests.get") as mock_get:
+        mock_get.return_value.status_code = 202
+
+        with caplog.at_level(logging.WARNING):
+            result2 = await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {
+                    "bgg_username": "test_user",
+                    "bgg_api_token": "token",
+                },
+            )
+
+    assert result2["type"] == "create_entry"
+    assert "BGG returned 202 Accepted" in caplog.text
 
 
 async def test_options_flow(hass):
