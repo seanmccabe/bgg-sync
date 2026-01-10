@@ -9,6 +9,7 @@ from custom_components.bgg_sync.todo import (
     BggCollectionTodoList,
 )
 
+
 @pytest.fixture
 def mock_coordinator(hass):
     """Mock the BGG Coordinator."""
@@ -34,28 +35,27 @@ def mock_coordinator(hass):
                 "min_players": "1",
                 "max_players": "4",
                 "year": "2020",
-            }
+            },
         }
     }
     return coordinator
+
 
 async def test_todo_creation(hass, mock_coordinator):
     """Test standard to-do list creation."""
     entry = MagicMock()
     entry.entry_id = "123"
     entry.options = {CONF_ENABLE_SHELF_TODO: True}
-    
-    hass.data[DOMAIN] = {
-        entry.entry_id: mock_coordinator
-    }
-    
+
+    hass.data[DOMAIN] = {entry.entry_id: mock_coordinator}
+
     async_add_entities = MagicMock()
-    
+
     await async_setup_entry(hass, entry, async_add_entities)
-    
+
     assert async_add_entities.called
     args = async_add_entities.call_args[0][0]
-    
+
     assert len(args) == 1
     assert isinstance(args[0], BggCollectionTodoList)
     assert args[0].name == "Shelf"
@@ -67,33 +67,31 @@ async def test_todo_creation_disabled(hass, mock_coordinator):
     entry = MagicMock()
     entry.entry_id = "123"
     entry.options = {CONF_ENABLE_SHELF_TODO: False}
-    
-    hass.data[DOMAIN] = {
-        entry.entry_id: mock_coordinator
-    }
-    
+
+    hass.data[DOMAIN] = {entry.entry_id: mock_coordinator}
+
     async_add_entities = MagicMock()
-    
+
     await async_setup_entry(hass, entry, async_add_entities)
-    
+
     assert not async_add_entities.called
 
 
 async def test_todo_items_content(hass, mock_coordinator):
     """Test to-do list items are populated correctly."""
     todo_list = BggCollectionTodoList(mock_coordinator)
-    
+
     items = todo_list.todo_items
-    
+
     assert len(items) == 2
-    
+
     # Sort order is by name: "Another Game" then "Carcassonne"
     first = items[0]
     assert first.summary == "Another Game"
     assert first.uid == "123"
     assert "Rank: N/A" in first.description
     assert "Rating: N/A" in first.description
-    
+
     second = items[1]
     assert second.summary == "Carcassonne"
     assert second.uid == "822"
@@ -112,15 +110,15 @@ async def test_todo_empty_data(hass, mock_coordinator):
 async def test_todo_unsupported_operations(hass, mock_coordinator):
     """Test that write operations raise NotImplementedError."""
     todo_list = BggCollectionTodoList(mock_coordinator)
-    
+
     # Add
     with pytest.raises(NotImplementedError):
         await todo_list.async_create_todo_item(TodoItem(summary="Test"))
-        
+
     # Update
     with pytest.raises(NotImplementedError):
         await todo_list.async_update_todo_item(TodoItem(summary="Test", uid="1"))
-        
+
     # Delete
     with pytest.raises(NotImplementedError):
         await todo_list.async_delete_todo_items(["1"])
