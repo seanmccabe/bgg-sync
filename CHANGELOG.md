@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0-beta.1] - 2026-01-10
+
+### Changed
+- **Async Migration**: Completely migrated implementation from `requests` to `aiohttp`. This removes all blocking I/O from the event loop, ensuring better performance and stability within Home Assistant.
+- **Dependencies**: Removed `requests` dependency.
+
 ## [1.1.0] - 2026-01-10
 
 ### Added

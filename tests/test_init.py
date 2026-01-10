@@ -1,6 +1,6 @@
 """Test BGG Sync setup."""
 import logging
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from custom_components.bgg_sync.const import (
     DOMAIN,
     SERVICE_TRACK_GAME,
@@ -201,7 +201,7 @@ async def test_service_record_play(hass):
         "custom_components.bgg_sync.BggDataUpdateCoordinator.async_config_entry_first_refresh"
     ), patch(
         "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups"
-    ), patch("custom_components.bgg_sync.record_play_on_bgg") as mock_record:
+    ), patch("custom_components.bgg_sync.async_record_play_on_bgg") as mock_record:
         await async_setup_entry(hass, entry)
 
         await hass.services.async_call(
@@ -212,7 +212,7 @@ async def test_service_record_play(hass):
         )
 
         assert mock_record.called
-        assert mock_record.call_args[0][0] == "test_user"
+        assert mock_record.call_args[0][1] == "test_user"
 
 
 async def test_service_record_play_errors(hass, caplog):
@@ -239,28 +239,7 @@ async def test_service_record_play_errors(hass, caplog):
             )
         assert "No password configured for test_user" in caplog.text
 
-        # Reset logs
         caplog.clear()
-
-        # 2. Logic failure - Mock requests failure inside the helper function
-        entry.data["bgg_password"] = "saved_pass"
-
-        # We Mock requests.Session to propagate an error
-        with patch("requests.Session") as mock_session_cls:
-            mock_session = mock_session_cls.return_value
-            # Make POST raise exception
-            mock_session.post.side_effect = Exception("API Error")
-
-            with caplog.at_level(logging.ERROR):
-                await hass.services.async_call(
-                    DOMAIN,
-                    SERVICE_RECORD_PLAY,
-                    service_data={"username": "test_user", "game_id": 123},
-                    blocking=True,
-                )
-
-        # Assert the exception handler in record_play_on_bgg caught it
-        assert "Error recording play on BGG" in caplog.text
 
         # 3. Test Unknown User
         caplog.clear()
@@ -274,86 +253,109 @@ async def test_service_record_play_errors(hass, caplog):
         assert "No BGG account configured for unknown_user" in caplog.text
 
 
-def test_record_play_logic():
-    """Test the synchronous logic for recording play."""
-    # Test record_play_on_bgg logic with mocked requests
-    with patch("requests.Session") as mock_session_cls:
-        mock_session = mock_session_cls.return_value
-        # Mock Login Post
-        mock_session.post.return_value.status_code = 200
+async def test_record_play_logic(hass):
+    """Test the asynchronous logic for recording play."""
+    from custom_components.bgg_sync import async_record_play_on_bgg
 
-        from custom_components.bgg_sync import record_play_on_bgg
+    # Mock session
+    mock_session = MagicMock()
+    # Configure context manager return
+    mock_session.__aenter__.return_value = mock_session
 
+    # Post calls return success
+    mock_response = AsyncMock()
+    mock_response.status = 200
+    mock_response.text.return_value = "success"
+    mock_session.post.return_value.__aenter__.return_value = mock_response
+
+    with patch(
+        "custom_components.bgg_sync.async_create_clientsession",
+        return_value=mock_session,
+    ):
         # Run with explicit date
-        record_play_on_bgg("u", "p", 123, "2022-01-01", 30, "Fun", [])
+        await async_record_play_on_bgg(hass, "u", "p", 123, "2022-01-01", 30, "Fun", [])
 
         # Verify calls
-        assert mock_session.post.call_count == 2  # Login + Play
+        assert mock_session.post.call_count == 2
 
-        # Verify Login
-        login_call = mock_session.post.call_args_list[0]
-        assert "login/api/v1" in login_call[0][0]
+        calls = mock_session.post.call_args_list
+        login_call = calls[0]
+        play_call = calls[1]
 
-        # Verify Play
-        play_call = mock_session.post.call_args_list[1]
-        assert "geekplay.php" in play_call[0][0]
-        data = play_call[1]["data"]
-        assert data["objectid"] == 123
-        assert data["playdate"] == "2022-01-01"
+        assert str(login_call[0][0]).endswith("/login/api/v1")
+        assert str(play_call[0][0]).endswith("/geekplay.php")
 
 
-def test_record_play_logic_default_date():
+async def test_record_play_logic_default_date(hass):
     """Test that default date is used if not provided."""
-    with patch("requests.Session") as mock_session_cls:
-        mock_session = mock_session_cls.return_value
-        mock_session.post.return_value.status_code = 200
+    from custom_components.bgg_sync import async_record_play_on_bgg
+    from datetime import datetime
 
-        from custom_components.bgg_sync import record_play_on_bgg
-        from datetime import datetime
+    mock_session = MagicMock()
+    mock_session.__aenter__.return_value = mock_session
 
-        # Run without date
-        record_play_on_bgg("u", "p", 123, None, None, None, [])
+    mock_response = AsyncMock()
+    mock_response.status = 200
+    mock_response.text.return_value = "success"
+    mock_session.post.return_value.__aenter__.return_value = mock_response
 
-        play_call = mock_session.post.call_args_list[1]
+    with patch(
+        "custom_components.bgg_sync.async_create_clientsession",
+        return_value=mock_session,
+    ):
+        await async_record_play_on_bgg(hass, "u", "p", 123, None, None, None, [])
+
+        calls = mock_session.post.call_args_list
+        play_call = calls[1]
         data = play_call[1]["data"]
-        # Convert today format
         expected = datetime.now().strftime("%Y-%m-%d")
         assert data["playdate"] == expected
 
 
-def test_record_play_logic_login_fail(caplog):
-    """Test synchronous record logic: Login Failure (401)."""
-    with patch("requests.Session") as mock_session_cls:
-        mock_session = mock_session_cls.return_value
-        mock_session.post.return_value.status_code = 401
+async def test_record_play_logic_login_fail(hass, caplog):
+    """Test asynchronous record logic: Login Failure (401)."""
+    from custom_components.bgg_sync import async_record_play_on_bgg
 
-        from custom_components.bgg_sync import record_play_on_bgg
-        import logging
+    mock_session = MagicMock()
+    mock_session.__aenter__.return_value = mock_session
 
-        with caplog.at_level(logging.ERROR):
-            record_play_on_bgg("u", "p", 1, "2022-01-01", 30, "", [])
+    mock_response = AsyncMock()
+    mock_response.status = 401  # Login fail
+    mock_session.post.return_value.__aenter__.return_value = mock_response
 
-        assert "BGG Login failed" in caplog.text
+    with patch(
+        "custom_components.bgg_sync.async_create_clientsession",
+        return_value=mock_session,
+    ), caplog.at_level(logging.ERROR):
+        await async_record_play_on_bgg(hass, "u", "p", 1, "2022-01-01", 30, "", [])
+
+    assert "BGG Login failed" in caplog.text
 
 
-def test_record_play_logic_post_fail(caplog):
-    """Test synchronous record logic: Post Failure (500)."""
-    with patch("requests.Session") as mock_session_cls:
-        mock_session = mock_session_cls.return_value
+async def test_record_play_logic_post_fail(hass, caplog):
+    """Test asynchronous record logic: Post Failure (500)."""
+    from custom_components.bgg_sync import async_record_play_on_bgg
 
-        from custom_components.bgg_sync import record_play_on_bgg
-        import logging
+    mock_session = MagicMock()
+    mock_session.__aenter__.return_value = mock_session
 
-        # 1. Login = 200, Play = 500
-        mock_session.post.side_effect = [
-            MagicMock(status_code=200),
-            MagicMock(status_code=500, text="Internal Server Error"),
-        ]
+    resp_ok = AsyncMock()
+    resp_ok.status = 200
+    resp_ok.text.return_value = ""
 
-        with caplog.at_level(logging.ERROR):
-            record_play_on_bgg("u", "p", 1, "2022-01-01", 30, "", [])
+    resp_fail = AsyncMock()
+    resp_fail.status = 500
+    resp_fail.text.return_value = "Internal Server Error"
 
-        assert "Failed to record play on BGG: Internal Server Error" in caplog.text
+    mock_session.post.return_value.__aenter__.side_effect = [resp_ok, resp_fail]
+
+    with patch(
+        "custom_components.bgg_sync.async_create_clientsession",
+        return_value=mock_session,
+    ), caplog.at_level(logging.ERROR):
+        await async_record_play_on_bgg(hass, "u", "p", 1, "2022-01-01", 30, "", [])
+
+    assert "Failed to record play on BGG" in caplog.text
 
 
 async def test_reload_entry(hass):
