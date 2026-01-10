@@ -217,7 +217,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                         ranks = rating.find("ranks") if rating is not None else None
 
                         rank_val = "Not Ranked"
-                        if ranks:
+                        if ranks is not None:
                             for rank in ranks.findall("rank"):
                                 if rank.get("name") == "boardgame":
                                     rank_val = rank.get("value")
@@ -359,7 +359,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                                 # Re-parse Rank for consistency
                                 rank_val = "Not Ranked"
                                 ranks = item.find("statistics/ratings/ranks")
-                                if ranks:
+                                if ranks is not None:
                                     for rank in ranks.findall("rank"):
                                         if rank.get("name") == "boardgame":
                                             rank_val = rank.get("value")
