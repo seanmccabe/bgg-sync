@@ -1,7 +1,6 @@
 """Todo platform for BGG Sync."""
 from __future__ import annotations
 
-from typing import Any
 
 from homeassistant.components.todo import TodoListEntity, TodoItem
 from homeassistant.config_entries import ConfigEntry
@@ -12,6 +11,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, BGG_URL, CONF_ENABLE_SHELF_TODO
 from .coordinator import BggDataUpdateCoordinator
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -25,7 +25,9 @@ async def async_setup_entry(
         async_add_entities([BggCollectionTodoList(coordinator)])
 
 
-class BggCollectionTodoList(CoordinatorEntity[BggDataUpdateCoordinator], TodoListEntity):
+class BggCollectionTodoList(
+    CoordinatorEntity[BggDataUpdateCoordinator], TodoListEntity
+):
     """A Todo List representation of the BGG Collection."""
 
     _attr_has_entity_name = True
@@ -51,7 +53,7 @@ class BggCollectionTodoList(CoordinatorEntity[BggDataUpdateCoordinator], TodoLis
 
         items = []
         collection = self.coordinator.data["collection"]
-        
+
         # Sort by name for nicer display
         sorted_games = sorted(collection.values(), key=lambda x: x.get("name", ""))
 
@@ -64,13 +66,13 @@ class BggCollectionTodoList(CoordinatorEntity[BggDataUpdateCoordinator], TodoLis
                 rating_str = f"{rating_val:.1f}"
             except (ValueError, TypeError):
                 rating_str = str(rating)
-                
+
             desc = f"Rank: {rank} | Rating: {rating_str} | Players: {game.get('min_players')}-{game.get('max_players')}"
-            
+
             # Use 'completed' status to indicate if played previously?
             # Or just leave all open. Let's leave all open so it looks like a shelf.
             status = "needs_action"
-            
+
             items.append(
                 TodoItem(
                     summary=game.get("name", "Unknown Game"),
@@ -84,7 +86,9 @@ class BggCollectionTodoList(CoordinatorEntity[BggDataUpdateCoordinator], TodoLis
     async def async_create_todo_item(self, item: TodoItem) -> None:
         """Add an item to the todo list."""
         # Not supported yet - would require adding to BGG collection
-        raise NotImplementedError("Adding games to BGG collection via Todo list is not supported yet.")
+        raise NotImplementedError(
+            "Adding games to BGG collection via Todo list is not supported yet."
+        )
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Update an item in the todo list."""

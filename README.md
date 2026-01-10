@@ -77,7 +77,7 @@ The integration creates the following sensors:
 *   `sensor.{game_name}` (optional): A rich sensor for a specific tracked game.
     *   **State**: Total Plays.
     *   **Entity Picture**: The authentic game box art from BGG (or your custom override).
-    *   **Attributes**: 
+    *   **Attributes**:
         *   `bgg_id`, `bgg_url`, `image_url`
         *   `rank`, `year`, `weight`, `rating`, `bayes_rating`
         *   `min_players`, `max_players`
