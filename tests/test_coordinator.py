@@ -122,11 +122,10 @@ async def test_coordinator_202_response(hass, caplog, mock_response, mock_bgg_se
 
     mock_bgg_session.get.side_effect = side_effect
 
-    with caplog.at_level(logging.INFO):
-        await coordinator._async_update_data()
+    mock_bgg_session.get.side_effect = side_effect
 
-    assert "BGG is generating play data" in caplog.text
-    assert "BGG is (202) generating collection data" in caplog.text
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
 
     await hass.async_block_till_done()
 
@@ -373,10 +372,10 @@ async def test_coordinator_collection_message_202(
 
     mock_bgg_session.get.side_effect = side_effect
 
-    with caplog.at_level(logging.INFO):
-        await coordinator._async_update_data()
+    mock_bgg_session.get.side_effect = side_effect
 
-    assert "BGG is (202) processing collection" in caplog.text
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
 
     await hass.async_block_till_done()
 

@@ -200,15 +200,21 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                             all_items.extend(items)
                         else:
                             _LOGGER.info(
-                                "BGG is (202) processing collection for %s (%s), will try again next poll",
+                                "BGG is (202) processing collection for %s (%s), retrying",
                                 self.username,
                                 subtype,
                             )
+                            raise UpdateFailed(
+                                "BGG is processing collection, retrying later"
+                            )
                     elif resp.status == 202:
                         _LOGGER.info(
-                            "BGG is (202) generating collection data for %s (%s)",
+                            "BGG is (202) generating collection for %s (%s), retrying",
                             self.username,
                             subtype,
+                        )
+                        raise UpdateFailed(
+                            "BGG is processing collection, retrying later"
                         )
                     else:
                         _LOGGER.warning(

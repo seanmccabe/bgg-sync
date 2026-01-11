@@ -30,6 +30,8 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - **Clean Attribute Text**: Fixed issue where BGG BBCode tags (e.g. `[thing=...]`) were appearing in sensor attributes (last play comments).
 - **Service Stability:** Moved blocking legacy recording logic into an executor job to maintain Home Assistant performance standards while ensuring session persistence.
+- **Track Game Service:** Fixed an issue where using the `track_game` service could cause existing sensors to become unavailable if BGG returned a processing status (202).
+
 
 ## [1.1.1] - 2026-01-11
 
