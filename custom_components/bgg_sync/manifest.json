@@ -1,15 +1,15 @@
 {
-  "domain": "bgg_sync",
-  "name": "BoardGameGeek",
   "codeowners": [
     "@seanmccabe"
   ],
   "config_flow": true,
   "documentation": "https://github.com/seanmccabe/bgg-sync",
+  "domain": "bgg_sync",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/seanmccabe/bgg-sync/issues",
+  "name": "BoardGameGeek",
   "requirements": [
     "requests>=2.0"
   ],
-  "version": "1.2.0-beta.10"
+  "version": "1.2.0-beta.11"
 }

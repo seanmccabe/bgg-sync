@@ -2,13 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0-beta.10] - 2026-01-11
+## [1.2.0-beta.11] - 2026-01-11
 
 ### Added
 - **Force Sync Button:** Added a button entity to manually trigger a synchronisation with BoardGameGeek.
 - **Last Sync Sensor:** Added a diagnostic sensor (`bgg_last_sync`) to track the timestamp of the last successful data fetch.
 - **String Localization:** Added friendly localised names for the services.
-- **Player Details in Recording:** The `record_play` service now supports passing player names and winners to BoardGameGeek.
+- **Player Details in Recording:** The `record_play` service now supports passing player names, winners, scores, positions, colors, and ratings to BoardGameGeek.
 
 ### Changed
 - **Asyncio Migration:** Fully migrated network calls to `aiohttp` to prevent thread blocking.

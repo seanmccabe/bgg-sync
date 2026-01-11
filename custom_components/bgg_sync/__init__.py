@@ -186,26 +186,43 @@ def record_play_on_bgg(username, password, game_id, date, length, comments, play
         if not date:
             date = dt_util.now().strftime("%Y-%m-%d")
 
-        data = {
+        payload = {
             "action": "save",
-            "objectid": game_id,
+            "objectid": int(game_id),
             "objecttype": "thing",
             "playdate": date,
-            "length": str(length) if length else "",
+            "length": int(length) if length else 0,
             "comments": comments or "",
             "ajax": 1,
+            "quantity": 1,
         }
 
-        # Add players if provided
+        # Add players if provided (using the JSON array format)
         if players and isinstance(players, list):
-            for i, p in enumerate(players):
-                data[f"playername[{i}]"] = p.get("name", "")
-                data[f"playerwin[{i}]"] = "1" if p.get("winner") else "0"
+            payload["players"] = []
+            for p in players:
+                name = p.get("name", "")
+
+                player_obj = {
+                    "name": name,
+                    "win": bool(p.get("winner")),
+                    "score": str(p.get("score", "")),
+                    "position": str(p.get("position", "")),
+                    "color": str(p.get("color", "")),
+                    "rating": int(p.get("rating", 0)) if p.get("rating") else 0,
+                    "new": True,
+                    "selected": True,
+                }
+
+                if name and " " not in name:
+                    player_obj["username"] = name
+
+                payload["players"].append(player_obj)
 
         # Update Referer for the play post to match game context
         session.headers.update({"Referer": f"{BGG_URL}/boardgame/{game_id}"})
 
-        resp = session.post(play_url, data=data, timeout=10)
+        resp = session.post(play_url, json=payload, timeout=10)
         _LOGGER.debug(
             "Record Play Response Code: %s | Body: %s",
             resp.status_code,

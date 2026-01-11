@@ -64,12 +64,17 @@ async def test_service_record_play(hass):
         await hass.services.async_call(
             DOMAIN,
             SERVICE_RECORD_PLAY,
-            service_data={"username": "test_user", "game_id": 123},
+            service_data={
+                "username": "test_user",
+                "game_id": 123,
+                "players": [{"name": "Sean", "winner": True}],
+            },
             blocking=True,
         )
 
         assert mock_record.called
         assert mock_record.call_args[0][0] == "test_user"
+        assert mock_record.call_args[0][6][0]["name"] == "Sean"
 
 
 async def test_service_record_play_errors(hass, caplog):
@@ -109,7 +114,7 @@ async def test_service_record_play_errors(hass, caplog):
 
 
 def test_record_play_logic_requests():
-    """Test the record_play_on_bgg logic using requests."""
+    """Test the record_play_on_bgg logic using requests and JSON."""
     from custom_components.bgg_sync import record_play_on_bgg
 
     mock_session = MagicMock()
@@ -119,16 +124,36 @@ def test_record_play_logic_requests():
     mock_session.post.return_value = mock_resp
 
     with patch("requests.Session", return_value=mock_session):
-        players = [{"name": "Sean", "winner": True}]
+        players = [
+            {
+                "name": "Sean",
+                "winner": True,
+                "score": 100,
+                "position": "1",
+                "color": "Blue",
+                "rating": 5,
+            }
+        ]
         record_play_on_bgg("u", "p", 123, "2022-01-01", 30, "Fun", players)
 
+        # Check login (still form/json depending on code, let's see)
+        # Login uses JSON
         assert mock_session.post.call_count == 2
         calls = mock_session.post.call_args_list
-        assert "/login/api/v1" in calls[0][0][0]
+
+        # Verify Play Record JSON
         assert "/geekplay.php" in calls[1][0][0]
-        data = calls[1][1]["data"]
-        assert data["playername[0]"] == "Sean"
-        assert data["playerwin[0]"] == "1"
+        payload = calls[1][1]["json"]
+        assert payload["objectid"] == 123
+        assert payload["players"][0]["name"] == "Sean"
+        assert payload["players"][0]["win"] is True
+        assert payload["players"][0]["username"] == "Sean"
+        assert payload["players"][0]["score"] == "100"
+        assert payload["players"][0]["position"] == "1"
+        assert payload["players"][0]["color"] == "Blue"
+        assert payload["players"][0]["rating"] == 5
+        assert payload["players"][0]["selected"] is True
+        assert payload["players"][0]["new"] is True
 
 
 def test_record_play_logic_fail_requests(caplog):
@@ -142,7 +167,7 @@ def test_record_play_logic_fail_requests(caplog):
     mock_session.post.return_value = mock_resp
 
     with patch("requests.Session", return_value=mock_session):
-        with caplog.at_level(logging.ERROR):
+        with caplog.at_level(logging.ERROR, logger="custom_components.bgg_sync"):
             record_play_on_bgg("u", "p", 123, None, None, None, None)
         assert "BGG Login failed for u" in caplog.text
 
@@ -150,7 +175,7 @@ def test_record_play_logic_fail_requests(caplog):
         caplog.clear()
         mock_resp.status_code = 200
         mock_resp.text = '{"error":"Failed"}'
-        with caplog.at_level(logging.ERROR):
+        with caplog.at_level(logging.ERROR, logger="custom_components.bgg_sync"):
             record_play_on_bgg("u", "p", 123, None, None, None, None)
         assert "Failed to record play on BGG" in caplog.text
 
@@ -159,9 +184,9 @@ def test_record_play_logic_exception(caplog):
     """Test exception during record play."""
     from custom_components.bgg_sync import record_play_on_bgg
 
-    with patch("requests.Session") as mock_session_class:
-        mock_session_class.side_effect = Exception("Connection Error")
-        with caplog.at_level(logging.ERROR):
+    # Patch Session directly to raise exception on init
+    with patch("requests.Session", side_effect=Exception("Connection Error")):
+        with caplog.at_level(logging.ERROR, logger="custom_components.bgg_sync"):
             record_play_on_bgg("u", "p", 123, None, None, None, None)
         assert "Error recording play on BGG: Connection Error" in caplog.text
 

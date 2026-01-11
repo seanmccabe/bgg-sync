@@ -34,8 +34,12 @@ record_play:
       selector:
         text:
     players:
-      description: List of players and if they won
-      example: '[{"name": "Sean", "winner": true}, {"name": "Kelly", "winner": false}]'
+      description: "List of players. Each player can have: name (or BGG username), winner (true/false), score, position, color, and rating (1-10)."
+      example: |-
+        [
+          {"name": "seanmccabe", "winner": true, "score": "100", "position": "1", "color": "Blue", "rating": 10},
+          {"name": "Kelly", "winner": false, "score": "85", "position": "2", "color": "Red"}
+        ]
       selector:
         object:
 
