@@ -31,6 +31,7 @@ class BggCollectionTodoList(
     """A Todo List representation of the BGG Collection."""
 
     _attr_has_entity_name = True
+    _attr_attribution = "Data provided by BoardGameGeek"
     _attr_icon = "mdi:bookshelf"
 
     def __init__(self, coordinator: BggDataUpdateCoordinator) -> None:

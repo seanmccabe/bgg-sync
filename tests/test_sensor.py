@@ -40,6 +40,7 @@ async def test_sensor_setup(hass):
     assert plays_sensor.state == 100
     assert plays_sensor.extra_state_attributes[ATTR_LAST_PLAY]["game"] == "Catan"
     assert plays_sensor.icon == "mdi:dice-multiple"
+    assert plays_sensor.attribution == "Data provided by BoardGameGeek"
 
     # 2. BggCollectionSensor
     coll_sensor = BggCollectionSensor(coordinator)
