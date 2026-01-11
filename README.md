@@ -126,13 +126,21 @@ data:
   date: "2026-01-01"
   length: 60
   comments: "Great game!"
+  location: "Home"
+  incomplete: false
+  nowinstats: false
   players:
-    - name: "Player One"
-      username: "bgg_user_1"
-      win: true
-    - name: "Player Two"
-      username: "bgg_user_2"
-      win: false
+    - name: "seanmccabe"
+      winner: true
+      score: 100
+      position: "1"
+      color: "Blue"
+      rating: 10
+    - name: "Kelly"
+      winner: false
+      score: 85
+      position: "2"
+      color: "Red"
 ```
 
 **Arguments:**
@@ -142,10 +150,16 @@ data:
 *   `date` (Optional): Date of the play (YYYY-MM-DD). Defaults to today.
 *   `length` (Optional): Duration in minutes.
 *   `comments` (Optional): Comments about the play.
+*   `location` (Optional): Where the game was played (e.g., "Home", "Tabletop Cafe").
+*   `incomplete` (Optional): Boolean (true/false). Set to true if the play was not finished.
+*   `nowinstats` (Optional): Boolean (true/false). Set to true to exclude this play from win statistics.
 *   `players` (Optional): A list of players. Each player can have:
-    *   `name`: Display name.
-    *   `username`: BGG Username (optional).
-    *   `win`: Boolean (true/false) for winner status.
+    *   `name`: Display name or BGG Username.
+    *   `winner`: Boolean (true/false) for winner status.
+    *   `score`: Player score (string or number).
+    *   `position`: Starting position or rank (string).
+    *   `color`: Player color or team (string).
+    *   `rating`: Player's rating for the game (1-10 integer).
 
 ## Troubleshooting
 

@@ -106,6 +106,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 call.data.get("length"),
                 call.data.get("comments"),
                 call.data.get("players"),
+                call.data.get("location"),
+                call.data.get("incomplete", False),
+                call.data.get("nowinstats", False),
             )
 
         hass.services.async_register(DOMAIN, SERVICE_RECORD_PLAY, async_record_play)
@@ -154,7 +157,18 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         hass.services.async_register(DOMAIN, SERVICE_TRACK_GAME, async_track_game)
 
 
-def record_play_on_bgg(username, password, game_id, date, length, comments, players):
+def record_play_on_bgg(
+    username,
+    password,
+    game_id,
+    date,
+    length,
+    comments,
+    players,
+    location=None,
+    incomplete=False,
+    nowinstats=False,
+):
     """BGG play recording logic using requests for session stability."""
     try:
         # BGG cookies are handled more reliably by requests in complex session flows
@@ -193,6 +207,9 @@ def record_play_on_bgg(username, password, game_id, date, length, comments, play
             "playdate": date,
             "length": int(length) if length else 0,
             "comments": comments or "",
+            "location": location or "",
+            "incomplete": bool(incomplete),
+            "nowinstats": bool(nowinstats),
             "ajax": 1,
             "quantity": 1,
         }

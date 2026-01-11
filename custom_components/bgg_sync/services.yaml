@@ -33,6 +33,21 @@ record_play:
       example: "Fun game with the family!"
       selector:
         text:
+    location:
+      description: Where the game was played
+      example: "Home"
+      selector:
+        text:
+    incomplete:
+      description: Whether the play was finished
+      default: false
+      selector:
+        boolean:
+    nowinstats:
+      description: If true, this play will not be included in win statistics
+      default: false
+      selector:
+        boolean:
     players:
       description: "List of players. Each player can have: name (or BGG username), winner (true/false), score, position, color, and rating (1-10)."
       example: |-

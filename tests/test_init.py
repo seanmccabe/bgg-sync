@@ -134,7 +134,9 @@ def test_record_play_logic_requests():
                 "rating": 5,
             }
         ]
-        record_play_on_bgg("u", "p", 123, "2022-01-01", 30, "Fun", players)
+        record_play_on_bgg(
+            "u", "p", 123, "2022-01-01", 30, "Fun", players, "Home", True, True
+        )
 
         # Check login (still form/json depending on code, let's see)
         # Login uses JSON
@@ -145,6 +147,9 @@ def test_record_play_logic_requests():
         assert "/geekplay.php" in calls[1][0][0]
         payload = calls[1][1]["json"]
         assert payload["objectid"] == 123
+        assert payload["location"] == "Home"
+        assert payload["incomplete"] is True
+        assert payload["nowinstats"] is True
         assert payload["players"][0]["name"] == "Sean"
         assert payload["players"][0]["win"] is True
         assert payload["players"][0]["username"] == "Sean"
