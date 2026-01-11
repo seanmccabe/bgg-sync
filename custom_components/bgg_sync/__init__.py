@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -23,7 +24,6 @@ from .const import (
     CONF_ENABLE_LOGGING,
     BGG_URL,
 )
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from .coordinator import BggDataUpdateCoordinator
 
 
@@ -34,19 +34,15 @@ PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.TODO, Platform.BUTTON]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up BGG Sync from a config entry."""
-    # Merge data and options
     conf = {**entry.data, **entry.options}
 
     username = conf[CONF_BGG_USERNAME]
-    # If logging is disabled, don't pass the password to coordinator
     enable_logging = conf.get(CONF_ENABLE_LOGGING, False)
-    # Check both data and options for password as it might be in either
     raw_password = conf.get(CONF_BGG_PASSWORD)
     password = raw_password if enable_logging else None
 
     api_token = conf.get(CONF_API_TOKEN)
 
-    # Parse game IDs from configuration
     game_ids_from_csv = []
     game_ids_raw = conf.get(CONF_GAMES, "")
     for x in game_ids_raw.split(","):
@@ -76,14 +72,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Set up services for BGG Sync."""
 
-    # RECORD PLAY SERVICE
     if not hass.services.has_service(DOMAIN, SERVICE_RECORD_PLAY):
 
         async def async_record_play(call):
             """Record a play on BGG."""
             username = call.data["username"]
             game_id = call.data["game_id"]
-            # Find config entry for this username to get password
+
             entry = None
             for config_entry in hass.config_entries.async_entries(DOMAIN):
                 if config_entry.data.get(CONF_BGG_USERNAME) == username:
@@ -114,23 +109,15 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         hass.services.async_register(DOMAIN, SERVICE_RECORD_PLAY, async_record_play)
 
-    # TRACK GAME SERVICE
     if not hass.services.has_service(DOMAIN, SERVICE_TRACK_GAME):
 
         async def async_track_game(call):
             """Add a game to be tracked."""
             bgg_id = call.data["bgg_id"]
-            # Handle optional args
             nfc = call.data.get("nfc_tag")
             music = call.data.get("music")
             custom_image = call.data.get("custom_image")
 
-            _LOGGER.info(
-                "Tracking request for ID %s | NFC: %s | Music: %s", bgg_id, nfc, music
-            )
-
-            # Find entry (default to first if not specified)
-            # Support optional 'username' to target specific instance
             target_username = call.data.get("username")
             entry = None
             entries = hass.config_entries.async_entries(DOMAIN)
@@ -147,14 +134,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 _LOGGER.error("No BGG Sync configuration found to track game.")
                 return
 
-            # Update Options
             new_options = dict(entry.options)
             current_data = new_options.get(CONF_GAME_DATA, {}).copy()
 
-            # Update the game entry
             metadata = current_data.get(str(bgg_id), {})
-            # If it was an empty dict from previous legacy import, it might be there
-
             if nfc:
                 metadata[CONF_NFC_TAG] = nfc
             if music:
@@ -165,32 +148,31 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             current_data[str(bgg_id)] = metadata
             new_options[CONF_GAME_DATA] = current_data
 
-            _LOGGER.info("Updating entry options with new metadata for %s", bgg_id)
             hass.config_entries.async_update_entry(entry, options=new_options)
 
         hass.services.async_register(DOMAIN, SERVICE_TRACK_GAME, async_track_game)
 
 
 async def async_record_play_on_bgg(
-    hass, username, password, game_id, date, length, comments, players
+    hass: HomeAssistant, username, password, game_id, date, length, comments, players
 ):
-    """BGG play recording logic."""
-    async with async_create_clientsession(hass) as session:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Referer": f"{BGG_URL}/login",
-        }
+    """BGG play recording logic using aiohttp with session persistence."""
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": f"{BGG_URL}/login",
+            }
 
-        login_url = f"{BGG_URL}/login/api/v1"
-        login_payload = {"credentials": {"username": username, "password": password}}
+            login_url = f"{BGG_URL}/login/api/v1"
+            login_payload = {
+                "credentials": {"username": username, "password": password}
+            }
 
-        try:
-            # We must use json=login_payload so requests sets Content-Type: application/json
+            # 1. Login to get session cookies
             async with session.post(
                 login_url, json=login_payload, headers=headers, timeout=10
             ) as response:
-                # API v1 usually returns 200 or 204 on success.
-                # If it fails, it might return 400/401.
                 if response.status not in [200, 204]:
                     _LOGGER.error(
                         "BGG Login failed for %s. Status: %s, Body: %s",
@@ -200,7 +182,7 @@ async def async_record_play_on_bgg(
                     )
                     return
 
-            # Save play via PHP endpoint
+            # 2. Record Play
             play_url = f"{BGG_URL}/geekplay.php"
             if not date:
                 date = dt_util.now().strftime("%Y-%m-%d")
@@ -210,12 +192,17 @@ async def async_record_play_on_bgg(
                 "objectid": game_id,
                 "objecttype": "thing",
                 "playdate": date,
-                "length": length or "",
+                "length": str(length) if length else "",
                 "comments": comments or "",
-                "ajax": 1,
+                "ajax": "1",
             }
 
-            # Update Referer for the play post
+            # Add players if provided
+            if players and isinstance(players, list):
+                for i, p in enumerate(players):
+                    data[f"playername[{i}]"] = p.get("name", "")
+                    data[f"playerwin[{i}]"] = "1" if p.get("winner") else "0"
+
             headers["Referer"] = f"{BGG_URL}/boardgame/{game_id}"
 
             async with session.post(
@@ -233,8 +220,8 @@ async def async_record_play_on_bgg(
                 else:
                     _LOGGER.error("Failed to record play on BGG: %s", text)
 
-        except Exception as err:
-            _LOGGER.error("Error recording play on BGG: %s", err)
+    except Exception as err:
+        _LOGGER.error("Error recording play on BGG: %s", err)
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
