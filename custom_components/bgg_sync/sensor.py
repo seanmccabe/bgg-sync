@@ -13,7 +13,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     DOMAIN,
     BGG_URL,
-    ATTR_LAST_PLAY,
     ATTR_GAME_RANK,
     ATTR_GAME_YEAR,
     ATTR_GAME_WEIGHT,

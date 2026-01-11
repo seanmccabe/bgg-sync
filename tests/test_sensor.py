@@ -11,7 +11,6 @@ from custom_components.bgg_sync.const import (
     CONF_NFC_TAG,
     CONF_MUSIC,
     CONF_CUSTOM_IMAGE,
-    ATTR_LAST_PLAY,
     CONF_IMPORT_COLLECTION,
 )
 
