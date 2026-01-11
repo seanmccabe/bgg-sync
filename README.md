@@ -1,4 +1,4 @@
-# <img src="brand_images/icon.png" width="40"/> BoardGameGeek Sync (BGG Sync)
+# <img src="brand_images/icon.png" width="40"/> BoardGameGeek  (BGG Sync)
 
 [![GitHub Release][releases-shield]][releases] [![License][license-shield]](LICENSE) [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration) [![Tests](https://img.shields.io/github/actions/workflow/status/seanmccabe/bgg-sync/tests.yaml?style=for-the-badge)](https://github.com/seanmccabe/bgg-sync/actions/workflows/tests.yaml)
 
@@ -27,7 +27,7 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 
 1.  Ensure you have [HACS](https://hacs.xyz/) installed.
 2.  Add this repository as a [Custom Repository](https://hacs.xyz/docs/faq/custom_repositories) in HACS.
-3.  Search for "BGG Sync" and download it.
+3.  Search for "BoardGameGeek" (or BGG Sync) and download it.
 4.  Restart Home Assistant.
 
 *Note: Submission to HACS is in the works.*
@@ -36,7 +36,7 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 ## Configuration
 
 1.  Go to **Settings** > **Devices & Services**.
-2.  Click **Add Integration** and search for "BGG Sync".
+2.  Click **Add Integration** and search for "BoardGameGeek".
 3.  Enter your **BGG Username**.
 4.  **API Token (Required for Sensors)**:
     *   Go to [BGG Applications](https://boardgamegeek.com/applications).
@@ -53,7 +53,7 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 IF you want to turn on Collection tracking and not just via the to-do list, you will need to enable the "Track Collection" option.
 
 1.  Go to **Settings** > **Devices & Services**.
-2.  Search for "BGG Sync" and click on it.
+2.  Search for "BoardGameGeek" and click on it.
 3.  Click on the Cog icon for the user you want to enable collection tracking for.
 4.  Enable the "Track Collection" option.
 5.  Submit.
@@ -199,7 +199,7 @@ To run the tests locally:
 
 ## Disclaimer & Trademarks
 
-**BoardGameGeek Sync (BGG Sync)** is an independent open-source project and is not affiliated with, maintained by, or endorsed by BoardGameGeek, LLC.
+**BoardGameGeek (BGG Sync)** is an independent open-source project and is not affiliated with, maintained by, or endorsed by BoardGameGeek, LLC.
 
 * **BoardGameGeek** and **BGG** are registered trademarks of BoardGameGeek, LLC.
 * This integration uses the BoardGameGeek XML API2 but is not an official BoardGameGeek product.
