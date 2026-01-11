@@ -6,6 +6,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN,
@@ -211,9 +212,7 @@ def record_play_on_bgg(username, password, game_id, date, length, comments, play
         # This is a simplified version; in a real library it would be more robust.
         # Most BGG play loggers use the PHP endpoint.
         if not date:
-            from datetime import datetime
-
-            date = datetime.now().strftime("%Y-%m-%d")
+            date = dt_util.now().strftime("%Y-%m-%d")
 
         data = {
             "action": "save",

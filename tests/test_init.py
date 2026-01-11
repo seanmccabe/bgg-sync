@@ -304,21 +304,27 @@ def test_record_play_logic():
 
 def test_record_play_logic_default_date():
     """Test that default date is used if not provided."""
-    with patch("requests.Session") as mock_session_cls:
+    with patch("requests.Session") as mock_session_cls, patch(
+        "custom_components.bgg_sync.dt_util.now"
+    ) as mock_now:
         mock_session = mock_session_cls.return_value
         mock_session.post.return_value.status_code = 200
 
-        from custom_components.bgg_sync import record_play_on_bgg
+        # Mock time
         from datetime import datetime
+
+        fixed_now = datetime(2023, 5, 20, 12, 0, 0)
+        mock_now.return_value = fixed_now
+
+        from custom_components.bgg_sync import record_play_on_bgg
 
         # Run without date
         record_play_on_bgg("u", "p", 123, None, None, None, [])
 
         play_call = mock_session.post.call_args_list[1]
         data = play_call[1]["data"]
-        # Convert today format
-        expected = datetime.now().strftime("%Y-%m-%d")
-        assert data["playdate"] == expected
+        # Expect fixed date
+        assert data["playdate"] == "2023-05-20"
 
 
 def test_record_play_logic_login_fail(caplog):
