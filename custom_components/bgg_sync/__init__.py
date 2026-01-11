@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-import aiohttp
+import requests
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -96,8 +96,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 )
                 return
 
-            await async_record_play_on_bgg(
-                hass,
+            # Use executor job to run blocking requests call safely
+            await hass.async_add_executor_job(
+                record_play_on_bgg,
                 username,
                 password,
                 game_id,
@@ -153,72 +154,68 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         hass.services.async_register(DOMAIN, SERVICE_TRACK_GAME, async_track_game)
 
 
-async def async_record_play_on_bgg(
-    hass: HomeAssistant, username, password, game_id, date, length, comments, players
-):
-    """BGG play recording logic using aiohttp with session persistence."""
+def record_play_on_bgg(username, password, game_id, date, length, comments, players):
+    """BGG play recording logic using requests for session stability."""
     try:
-        async with aiohttp.ClientSession() as session:
-            headers = {
+        # BGG cookies are handled more reliably by requests in complex session flows
+        session = requests.Session()
+        session.headers.update(
+            {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Referer": f"{BGG_URL}/login",
             }
+        )
 
-            login_url = f"{BGG_URL}/login/api/v1"
-            login_payload = {
-                "credentials": {"username": username, "password": password}
-            }
+        login_url = f"{BGG_URL}/login/api/v1"
+        login_payload = {"credentials": {"username": username, "password": password}}
 
-            # 1. Login to get session cookies
-            async with session.post(
-                login_url, json=login_payload, headers=headers, timeout=10
-            ) as response:
-                if response.status not in [200, 204]:
-                    _LOGGER.error(
-                        "BGG Login failed for %s. Status: %s, Body: %s",
-                        username,
-                        response.status,
-                        await response.text(),
-                    )
-                    return
+        # 1. Login to get session cookies
+        response = session.post(login_url, json=login_payload, timeout=10)
 
-            # 2. Record Play
-            play_url = f"{BGG_URL}/geekplay.php"
-            if not date:
-                date = dt_util.now().strftime("%Y-%m-%d")
+        if response.status_code not in [200, 204]:
+            _LOGGER.error(
+                "BGG Login failed for %s. Status: %s, Body: %s",
+                username,
+                response.status_code,
+                response.text,
+            )
+            return
 
-            data = {
-                "action": "save",
-                "objectid": game_id,
-                "objecttype": "thing",
-                "playdate": date,
-                "length": str(length) if length else "",
-                "comments": comments or "",
-                "ajax": "1",
-            }
+        # 2. Record Play
+        play_url = f"{BGG_URL}/geekplay.php"
+        if not date:
+            date = dt_util.now().strftime("%Y-%m-%d")
 
-            # Add players if provided
-            if players and isinstance(players, list):
-                for i, p in enumerate(players):
-                    data[f"playername[{i}]"] = p.get("name", "")
-                    data[f"playerwin[{i}]"] = "1" if p.get("winner") else "0"
+        data = {
+            "action": "save",
+            "objectid": game_id,
+            "objecttype": "thing",
+            "playdate": date,
+            "length": str(length) if length else "",
+            "comments": comments or "",
+            "ajax": 1,
+        }
 
-            headers["Referer"] = f"{BGG_URL}/boardgame/{game_id}"
+        # Add players if provided
+        if players and isinstance(players, list):
+            for i, p in enumerate(players):
+                data[f"playername[{i}]"] = p.get("name", "")
+                data[f"playerwin[{i}]"] = "1" if p.get("winner") else "0"
 
-            async with session.post(
-                play_url, data=data, headers=headers, timeout=10
-            ) as resp:
-                text = await resp.text()
-                _LOGGER.debug(
-                    "Record Play Response Code: %s | Body: %s",
-                    resp.status,
-                    text[:1000],
-                )
+        # Update Referer for the play post to match game context
+        session.headers.update({"Referer": f"{BGG_URL}/boardgame/{game_id}"})
 
-                if resp.status == 200 and "error" not in text.lower():
-                    _LOGGER.info("Successfully recorded play for %s on BGG", username)
-                else:
-                    _LOGGER.error("Failed to record play on BGG: %s", text)
+        resp = session.post(play_url, data=data, timeout=10)
+        _LOGGER.debug(
+            "Record Play Response Code: %s | Body: %s",
+            resp.status_code,
+            resp.text[:1000],
+        )
+
+        if resp.status_code == 200 and "error" not in resp.text.lower():
+            _LOGGER.info("Successfully recorded play for %s on BGG", username)
+        else:
+            _LOGGER.error("Failed to record play on BGG: %s", resp.text)
 
     except Exception as err:
         _LOGGER.error("Error recording play on BGG: %s", err)

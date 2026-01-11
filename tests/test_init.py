@@ -1,6 +1,6 @@
 """Tests for BGG Sync init."""
 import logging
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 
 
 from custom_components.bgg_sync import (
@@ -19,7 +19,6 @@ from custom_components.bgg_sync.const import (
 async def test_setup_unload_entry(hass):
     """Test setting up and unloading a config entry."""
     entry = MagicMock()
-    # Test CSV game IDs too
     entry.data = {CONF_BGG_USERNAME: "test_user", "games": "123, 456"}
     entry.options = {}
     entry.entry_id = "test"
@@ -59,7 +58,7 @@ async def test_service_record_play(hass):
         "custom_components.bgg_sync.BggDataUpdateCoordinator.async_config_entry_first_refresh"
     ), patch(
         "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups"
-    ), patch("custom_components.bgg_sync.async_record_play_on_bgg") as mock_record:
+    ), patch("custom_components.bgg_sync.record_play_on_bgg") as mock_record:
         await async_setup_entry(hass, entry)
 
         await hass.services.async_call(
@@ -70,7 +69,7 @@ async def test_service_record_play(hass):
         )
 
         assert mock_record.called
-        assert mock_record.call_args[0][1] == "test_user"
+        assert mock_record.call_args[0][0] == "test_user"
 
 
 async def test_service_record_play_errors(hass, caplog):
@@ -109,86 +108,62 @@ async def test_service_record_play_errors(hass, caplog):
         assert "No BGG account configured for unknown_user" in caplog.text
 
 
-async def test_record_play_logic_async(hass):
-    """Test the logic for recording play using aiohttp."""
-    from custom_components.bgg_sync import async_record_play_on_bgg
-
-    # Setup Mocks
-    mock_resp = AsyncMock()
-    mock_resp.status = 200
-    mock_resp.text.return_value = '{"success":1}'
+def test_record_play_logic_requests():
+    """Test the record_play_on_bgg logic using requests."""
+    from custom_components.bgg_sync import record_play_on_bgg
 
     mock_session = MagicMock()
-    mock_post_cm = AsyncMock()
-    mock_post_cm.__aenter__.return_value = mock_resp
-    mock_session.post.return_value = mock_post_cm
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.text = '{"success":1}'
+    mock_session.post.return_value = mock_resp
 
-    with patch("aiohttp.ClientSession") as mock_session_class:
-        mock_session_class.return_value.__aenter__.return_value = mock_session
-
-        # Test 1: With explicit date and players
+    with patch("requests.Session", return_value=mock_session):
         players = [{"name": "Sean", "winner": True}]
-        await async_record_play_on_bgg(
-            hass, "u", "p", 123, "2022-01-01", 30, "Fun", players
-        )
+        record_play_on_bgg("u", "p", 123, "2022-01-01", 30, "Fun", players)
 
         assert mock_session.post.call_count == 2
+        calls = mock_session.post.call_args_list
+        assert "/login/api/v1" in calls[0][0][0]
+        assert "/geekplay.php" in calls[1][0][0]
+        data = calls[1][1]["data"]
+        assert data["playername[0]"] == "Sean"
+        assert data["playerwin[0]"] == "1"
 
-        # Test 2: With default date (no date provided)
-        mock_session.post.reset_mock()
-        await async_record_play_on_bgg(hass, "u", "p", 123, None, 30, "Fun", None)
-        assert mock_session.post.call_count == 2
 
-
-async def test_record_play_logic_fail_async(hass, caplog):
-    """Test failure in recording play with aiohttp."""
-    from custom_components.bgg_sync import async_record_play_on_bgg
-
-    mock_resp = AsyncMock()
-    mock_resp.status = 401
-    mock_resp.text.return_value = "Unauthorized"
+def test_record_play_logic_fail_requests(caplog):
+    """Test failure in recording play."""
+    from custom_components.bgg_sync import record_play_on_bgg
 
     mock_session = MagicMock()
-    mock_post_cm = AsyncMock()
-    mock_post_cm.__aenter__.return_value = mock_resp
-    mock_session.post.return_value = mock_post_cm
+    mock_resp = MagicMock()
+    mock_resp.status_code = 401
+    mock_resp.text = "Unauthorized"
+    mock_session.post.return_value = mock_resp
 
-    with patch("aiohttp.ClientSession") as mock_session_class:
-        mock_session_class.return_value.__aenter__.return_value = mock_session
-        # 1. Login Fail
+    with patch("requests.Session", return_value=mock_session):
         with caplog.at_level(logging.ERROR):
-            await async_record_play_on_bgg(hass, "u", "p", 123, None, None, None, None)
+            record_play_on_bgg("u", "p", 123, None, None, None, None)
         assert "BGG Login failed for u" in caplog.text
 
-        # 2. Record Play Fail (Login succeeds, but play fails)
+        # Test play recording fail
         caplog.clear()
-        mock_session.post.reset_mock()
-
-        login_resp = AsyncMock()
-        login_resp.status = 200
-
-        play_resp = AsyncMock()
-        play_resp.status = 200
-        play_resp.text.return_value = '{"error":"Some Error"}'
-
-        mock_session.post.side_effect = [
-            AsyncMock(__aenter__=AsyncMock(return_value=login_resp)),
-            AsyncMock(__aenter__=AsyncMock(return_value=play_resp)),
-        ]
-
+        mock_resp.status_code = 200
+        mock_resp.text = '{"error":"Failed"}'
         with caplog.at_level(logging.ERROR):
-            await async_record_play_on_bgg(hass, "u", "p", 123, None, None, None, None)
+            record_play_on_bgg("u", "p", 123, None, None, None, None)
         assert "Failed to record play on BGG" in caplog.text
 
 
-async def test_record_play_logic_exception(hass, caplog):
+def test_record_play_logic_exception(caplog):
     """Test exception during record play."""
-    from custom_components.bgg_sync import async_record_play_on_bgg
+    from custom_components.bgg_sync import record_play_on_bgg
 
-    with patch("aiohttp.ClientSession", side_effect=Exception("Connection Error")):
+    with patch("requests.Session") as mock_session_class:
+        mock_session_class.side_effect = Exception("Connection Error")
         with caplog.at_level(logging.ERROR):
-            await async_record_play_on_bgg(hass, "u", "p", 123, None, None, None, None)
-        assert "Connection Error" in caplog.text
+            record_play_on_bgg("u", "p", 123, None, None, None, None)
+        assert "Error recording play on BGG: Connection Error" in caplog.text
 
 
 async def test_service_track_game(hass):
@@ -232,9 +207,10 @@ async def test_service_track_game(hass):
             blocking=True,
         )
         assert mock_update.called
+        options_passed = mock_update.call_args[1]["options"]
+        assert "456" in options_passed["game_data"]
 
         # 3. Target username NOT found
-        caplog = MagicMock()
         with patch("custom_components.bgg_sync._LOGGER.error") as mock_log:
             await hass.services.async_call(
                 DOMAIN,
