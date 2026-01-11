@@ -141,7 +141,26 @@ class BggPlaysSensor(BggBaseSensor):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
-        return {ATTR_LAST_PLAY: self.coordinator.data.get("last_play")}
+        last_play = self.coordinator.data.get("last_play") or {}
+        # Try to find image for the game if we have it in cache
+        game_id = last_play.get("game_id")
+        image = None
+        if game_id:
+            try:
+                g_id = int(game_id)
+                details = self.coordinator.data.get("game_details", {}).get(g_id, {})
+                image = details.get("image")
+            except (ValueError, TypeError):
+                pass
+
+        return {
+            "game": last_play.get("game"),
+            "bgg_id": last_play.get("game_id"),
+            "date": last_play.get("date"),
+            "comment": last_play.get("comment"),
+            "expansions": last_play.get("expansions"),
+            "image": image,
+        }
 
 
 class BggCollectionSensor(BggBaseSensor):

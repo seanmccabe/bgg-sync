@@ -483,3 +483,44 @@ async def test_thing_api_xml_parse_error(hass, mock_bgg_session):
     assert 123 in data["collection"]
     # The 'game_details' would be populated from the collection data initially
     assert data["game_details"][123]["name"] == "G"
+
+
+async def test_clean_bgg_text(hass):
+    """Test the BBCode cleaning helper."""
+    coordinator = BggDataUpdateCoordinator(hass, "user", None, None, [])
+
+    # Test simple text
+    assert coordinator._clean_bgg_text("Simple text") == "Simple text"
+
+    # Test with thing tag
+    assert (
+        coordinator._clean_bgg_text("Played [thing=123]Game Name[/thing]")
+        == "Played Game Name"
+    )
+
+    # Test with multiple tags
+    assert (
+        coordinator._clean_bgg_text("[thing=1]A[/thing] vs [thing=2]B[/thing]")
+        == "A vs B"
+    )
+
+    # Test with simple tags
+    assert coordinator._clean_bgg_text("Bold [b]text[/b]") == "Bold text"
+
+    # Test None
+    assert coordinator._clean_bgg_text(None) == ""
+
+    # Test the user reported case
+    raw_comment = """Won with most parks (12)
+
+Played with expansions:
+-[thing=298729]PARKS: Nightfall[/thing]
+-[thing=358854]PARKS: Wildlife[/thing]"""
+
+    expected = """Won with most parks (12)
+
+Played with expansions:
+-PARKS: Nightfall
+-PARKS: Wildlife"""
+
+    assert coordinator._clean_bgg_text(raw_comment) == expected

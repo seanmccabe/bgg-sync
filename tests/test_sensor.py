@@ -38,8 +38,8 @@ async def test_sensor_setup(hass, mock_coordinator):
     # 1. BggPlaysSensor
     plays_sensor = BggPlaysSensor(mock_coordinator)
     assert plays_sensor.state == 100
-    assert plays_sensor.extra_state_attributes[ATTR_LAST_PLAY]["game"] == "Catan"
-    assert plays_sensor.extra_state_attributes[ATTR_LAST_PLAY]["game"] == "Catan"
+    assert plays_sensor.extra_state_attributes["game"] == "Catan"
+    assert plays_sensor.extra_state_attributes["bgg_id"] == 13
     assert plays_sensor.icon == "mdi:dice-multiple"
     assert plays_sensor.attribution == "Data provided by BoardGameGeek"
 
@@ -212,3 +212,37 @@ async def test_sensor_game_name_fallback(hass, mock_coordinator):
     # Later details update
     mock_coordinator.data["game_details"] = {999: {"name": "Late Game"}}
     assert sensor.name == "Late Game"
+
+
+async def test_sensor_plays_flattened_attributes(hass, mock_coordinator):
+    """Test that Play Sensor has flattened attributes."""
+    # Mock data for last play
+    last_play_data = {
+        "game": "Carcassonne",
+        "game_id": "822",
+        "date": "2024-01-01",
+        "comment": "Nice game",
+        "expansions": ["Inns & Cathedrals"],
+    }
+    # Mock game details for image lookup
+    mock_coordinator.data = {
+        "total_plays": 10,
+        "last_play": last_play_data,
+        "counts": {},
+        "game_details": {822: {"image": "http://image.url"}},
+        "collection": {},
+    }
+
+    from custom_components.bgg_sync.sensor import BggPlaysSensor
+
+    sensor = BggPlaysSensor(mock_coordinator)
+
+    attrs = sensor.extra_state_attributes
+
+    # Check flattened attributes
+    assert attrs["game"] == "Carcassonne"
+    assert attrs["bgg_id"] == "822"
+    assert attrs["date"] == "2024-01-01"
+    assert attrs["comment"] == "Nice game"
+    assert attrs["expansions"] == ["Inns & Cathedrals"]
+    assert attrs["image"] == "http://image.url"

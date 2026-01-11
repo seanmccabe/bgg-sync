@@ -4,6 +4,7 @@ import pytest
 from custom_components.bgg_sync.button import BggForceSyncButton, async_setup_entry
 from custom_components.bgg_sync.const import DOMAIN
 
+
 @pytest.fixture
 def mock_coordinator():
     """Fixture for mocking the coordinator."""

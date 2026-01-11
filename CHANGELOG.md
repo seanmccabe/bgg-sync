@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0-beta.4] - 2026-01-11
+## [1.2.0-beta.5] - 2026-01-11
 
 ### Added
 - **Force Sync Button:** Added a button entity to manually trigger a synchronisation with BoardGameGeek.
@@ -10,7 +10,18 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - **Asyncio Migration:** Fully migrated network calls to `aiohttp` to prevent thread blocking.
+- **Plays Sensor Attributes:** The `last_play` attribute is now "flattened" into top-level attributes on the Plays sensor:
+    - `game`
+    - `bgg_id`
+    - `date`
+    - `comment` (Cleaned of BBCode)
+    - `expansions` (Extracted from comment text)
+    - `image` (Fetched from game metadata if available)
+    - *NOTE:* The original nested `last_play` attribute dictionary has been removed.
 - **Dependencies:** Removed `requests` dependency.
+
+### Fixed
+- **Clean Attribute Text**: Fixed issue where BGG BBCode tags (e.g. `[thing=...]`) were appearing in sensor attributes (last play comments).
 
 ## [1.1.1] - 2026-01-11
 

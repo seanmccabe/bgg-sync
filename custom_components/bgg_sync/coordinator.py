@@ -1,4 +1,5 @@
 import logging
+import re
 import xml.etree.ElementTree as ET
 from datetime import timedelta
 
@@ -34,10 +35,6 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         self.password = password
         self.api_token = api_token
         self.game_ids = game_ids
-        self.username = username
-        self.password = password
-        self.api_token = api_token
-        self.game_ids = game_ids
         self.logged_in = False
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
@@ -45,6 +42,37 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
         if self.api_token:
             self.headers["Authorization"] = f"Bearer {self.api_token}"
+
+    def _clean_bgg_text(self, text: str | None) -> str:
+        """Clean BGG BBCode from text."""
+        if not text:
+            return ""
+        # Remove tags with properties like [thing=123]Name[/thing] -> Name
+        text = re.sub(r"\[\w+=[^\]]*\](.*?)\[\/\w+\]", r"\1", text)
+        # Remove simple tags like [b]Bold[/b] -> Bold
+        text = re.sub(r"\[/?\w+\]", "", text)
+        return text.strip()
+
+    def _extract_expansions(self, text: str | None) -> list[str]:
+        """Extract expansion names from BBCode in comments."""
+        if not text:
+            return []
+
+        expansions = []
+        if "Played with expansions" in text:
+            # Split by lines to only capture things in the relevant block if desired
+            lines = text.split("\n")
+            in_expansions = False
+            for line in lines:
+                if "Played with expansions" in line:
+                    in_expansions = True
+                    continue
+                if in_expansions:
+                    # simplistic extraction of content between tags
+                    matches = re.findall(r"\[thing=\d+\](.*?)\[/thing\]", line)
+                    expansions.extend(matches)
+
+        return expansions
 
     async def _login(self):
         """Login to BGG if password is provided and we don't have an API token."""
@@ -107,13 +135,16 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     if play_nodes:
                         last_play = play_nodes[0]
                         item = last_play.find("item")
+                        logger_comment = last_play.findtext("comments", "")
+
                         data["last_play"] = {
                             "game": item.get("name") if item is not None else "Unknown",
                             "game_id": item.get("objectid")
                             if item is not None
                             else None,
                             "date": last_play.get("date"),
-                            "comment": last_play.findtext("comments", ""),
+                            "comment": self._clean_bgg_text(logger_comment),
+                            "expansions": self._extract_expansions(logger_comment),
                         }
                 elif resp.status == 202:
                     _LOGGER.info(
