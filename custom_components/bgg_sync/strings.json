@@ -38,60 +38,60 @@
   },
   "services": {
     "record_play": {
+      "name": "Record Play",
       "description": "Record a play on BoardGameGeek",
       "fields": {
         "comments": {
-          "description": "Comments for the play",
-          "name": "Comments"
+          "name": "Comments",
+          "description": "Comments for the play"
         },
         "date": {
-          "description": "Date of the play (YYYY-MM-DD)",
-          "name": "Date"
+          "name": "Date",
+          "description": "Date of the play (YYYY-MM-DD)"
         },
         "game_id": {
-          "description": "The BGG ID of the game",
-          "name": "Game ID"
+          "name": "Game ID",
+          "description": "The BGG ID of the game"
         },
         "length": {
-          "description": "Length of the play in minutes",
-          "name": "Length"
+          "name": "Length",
+          "description": "Length of the play in minutes"
         },
         "players": {
-          "description": "List of players and if they won",
-          "name": "Players"
+          "name": "Players",
+          "description": "List of players and if they won"
         },
         "username": {
-          "description": "BGG Username to log as",
-          "name": "Username"
+          "name": "Username",
+          "description": "BGG Username to log as"
         }
-      },
-      "name": "Record Play"
+      }
     },
     "track_game": {
+      "name": "Track Game",
       "description": "Add a game to tracking or update its metadata (NFC, Music, Image)",
       "fields": {
         "bgg_id": {
-          "description": "The BGG ID of the game",
-          "name": "Game ID"
+          "name": "Game ID",
+          "description": "The BGG ID of the game"
         },
         "custom_image": {
-          "description": "Custom image URL for the sensor",
-          "name": "Custom Image"
+          "name": "Custom Image",
+          "description": "Custom image URL for the sensor"
         },
         "music": {
-          "description": "Spotify (or other service) URI or URL to play when scanned",
-          "name": "Music"
+          "name": "Music",
+          "description": "Spotify (or other service) URI or URL to play when scanned"
         },
         "nfc_tag": {
-          "description": "NFC Tag ID to associate with this game",
-          "name": "NFC Tag"
+          "name": "NFC Tag",
+          "description": "NFC Tag ID to associate with this game"
         },
         "username": {
-          "description": "BGG Username (optional, defaults to first configured)",
-          "name": "Username"
+          "name": "Username",
+          "description": "BGG Username (optional, defaults to first configured)"
         }
-      },
-      "name": "Track Game"
+      }
     }
   }
 }

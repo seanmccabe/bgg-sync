@@ -38,72 +38,72 @@
   },
   "services": {
     "record_play": {
+      "name": "Record Play",
       "description": "Record a play on BoardGameGeek",
       "fields": {
         "comments": {
-          "description": "Any additional notes about the play",
-          "name": "Comments"
+          "name": "Comments",
+          "description": "Any additional notes about the play"
         },
         "date": {
-          "description": "Date of the play (YYYY-MM-DD)",
-          "name": "Date"
+          "name": "Date",
+          "description": "Date of the play (YYYY-MM-DD)"
         },
         "game_id": {
-          "description": "The BGG ID of the game",
-          "name": "Game ID"
+          "name": "Game ID",
+          "description": "The BGG ID of the game"
         },
         "incomplete": {
-          "description": "Whether the play was finished",
-          "name": "Incomplete"
+          "name": "Incomplete",
+          "description": "Whether the play was finished"
         },
         "length": {
-          "description": "Length of the play in minutes",
-          "name": "Duration"
+          "name": "Duration",
+          "description": "Length of the play in minutes"
         },
         "location": {
-          "description": "Where the game was played",
-          "name": "Location"
+          "name": "Location",
+          "description": "Where the game was played"
         },
         "nowinstats": {
-          "description": "If true, this play will not be included in win statistics",
-          "name": "No Win Stats"
+          "name": "No Win Stats",
+          "description": "If true, this play will not be included in win statistics"
         },
         "players": {
-          "description": "List of players including name, winner, score, position, color, and rating.",
-          "name": "Players"
+          "name": "Players",
+          "description": "List of players including name, winner, score, position, color, and rating."
         },
         "username": {
-          "description": "BGG Username to log as",
-          "name": "Username"
+          "name": "Username",
+          "description": "BGG Username to log as"
         }
-      },
-      "name": "Record Play"
+      }
     },
     "track_game": {
+      "name": "Track Game",
       "description": "Add a game to tracking or update its metadata",
       "fields": {
         "bgg_id": {
-          "description": "The BGG ID of the game",
-          "name": "BGG ID"
+          "name": "BGG ID",
+          "description": "The BGG ID of the game"
         },
         "custom_image": {
-          "description": "Custom image URL for the sensor",
-          "name": "Custom Image"
+          "name": "Custom Image",
+          "description": "Custom image URL for the sensor"
         },
         "music": {
-          "description": "Spotify URI or URL to play when scanned",
-          "name": "Music"
+          "name": "Music",
+          "description": "Spotify URI or URL to play when scanned"
         },
         "nfc_tag": {
-          "description": "NFC Tag ID to associate with this game",
-          "name": "NFC Tag"
+          "name": "NFC Tag",
+          "description": "NFC Tag ID to associate with this game"
         },
         "username": {
-          "description": "BGG Username (optional)",
-          "name": "Username"
+          "name": "Username",
+          "description": "BGG Username (optional)"
         }
-      },
-      "name": "Track Game"
+      }
     }
   }
 }
