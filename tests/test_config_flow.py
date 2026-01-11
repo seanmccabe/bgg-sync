@@ -1,6 +1,6 @@
 """Test BGG Sync config flow."""
 import logging
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch
 from homeassistant import config_entries, setup
 from custom_components.bgg_sync.config_flow import validate_input
 from custom_components.bgg_sync.const import (
@@ -152,7 +152,7 @@ async def test_options_flow(hass):
 # --- Unit Tests for validate_input ---
 
 
-async def test_validate_input_logic_success(hass):
+async def test_validate_input_logic_success(hass, mock_bgg_session, mock_response):
     """Test validate_input logic: Success (200)."""
     data = {
         CONF_BGG_USERNAME: "user",
@@ -160,22 +160,15 @@ async def test_validate_input_logic_success(hass):
         CONF_ENABLE_LOGGING: False,
     }
 
-    mock_session = MagicMock()
-    mock_response = AsyncMock()
-    mock_response.status = 200
-    mock_session.get.return_value.__aenter__.return_value = mock_response
+    mock_bgg_session.get.return_value = mock_response(status=200)
 
-    with patch(
-        "custom_components.bgg_sync.config_flow.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        errors = await validate_input(hass, data)
+    errors = await validate_input(hass, data)
 
     await hass.async_block_till_done()
     assert errors == {}
 
 
-async def test_validate_input_logic_invalid_auth(hass):
+async def test_validate_input_logic_invalid_auth(hass, mock_bgg_session, mock_response):
     """Test validate_input logic: Invalid Auth (401)."""
     data = {
         CONF_BGG_USERNAME: "user",
@@ -183,22 +176,17 @@ async def test_validate_input_logic_invalid_auth(hass):
         CONF_ENABLE_LOGGING: False,
     }
 
-    mock_session = MagicMock()
-    mock_response = AsyncMock()
-    mock_response.status = 401
-    mock_session.get.return_value.__aenter__.return_value = mock_response
+    mock_bgg_session.get.return_value = mock_response(status=401)
 
-    with patch(
-        "custom_components.bgg_sync.config_flow.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        errors = await validate_input(hass, data)
+    errors = await validate_input(hass, data)
 
     await hass.async_block_till_done()
     assert errors == {CONF_API_TOKEN: "invalid_auth"}
 
 
-async def test_validate_input_logic_connection_error(hass):
+async def test_validate_input_logic_connection_error(
+    hass, mock_bgg_session, mock_response
+):
     """Test validate_input logic: Connection Error."""
     data = {
         CONF_BGG_USERNAME: "user",
@@ -206,21 +194,15 @@ async def test_validate_input_logic_connection_error(hass):
         CONF_ENABLE_LOGGING: False,
     }
 
-    mock_session = MagicMock()
-    # Mocking ClientError on __aenter__ to simulate connection failure during connection code
-    mock_session.get.return_value.__aenter__.side_effect = ClientError("fail")
+    mock_bgg_session.get.return_value = mock_response(exc=ClientError("fail"))
 
-    with patch(
-        "custom_components.bgg_sync.config_flow.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        errors = await validate_input(hass, data)
+    errors = await validate_input(hass, data)
 
     await hass.async_block_till_done()
     assert errors == {"base": "cannot_connect"}
 
 
-async def test_validate_input_logic_server_error(hass):
+async def test_validate_input_logic_server_error(hass, mock_bgg_session, mock_response):
     """Test validate_input logic: Server Error (500)."""
     data = {
         CONF_BGG_USERNAME: "user",
@@ -228,22 +210,17 @@ async def test_validate_input_logic_server_error(hass):
         CONF_ENABLE_LOGGING: False,
     }
 
-    mock_session = MagicMock()
-    mock_response = AsyncMock()
-    mock_response.status = 500
-    mock_session.get.return_value.__aenter__.return_value = mock_response
+    mock_bgg_session.get.return_value = mock_response(status=500)
 
-    with patch(
-        "custom_components.bgg_sync.config_flow.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        errors = await validate_input(hass, data)
+    errors = await validate_input(hass, data)
 
     await hass.async_block_till_done()
     assert errors == {"base": "cannot_connect"}
 
 
-async def test_validate_input_logic_202_warning(hass, caplog):
+async def test_validate_input_logic_202_warning(
+    hass, caplog, mock_bgg_session, mock_response
+):
     """Test validate_input logic: 202 Accepted warning."""
     data = {
         CONF_BGG_USERNAME: "user",
@@ -251,15 +228,9 @@ async def test_validate_input_logic_202_warning(hass, caplog):
         CONF_ENABLE_LOGGING: False,
     }
 
-    mock_session = MagicMock()
-    mock_response = AsyncMock()
-    mock_response.status = 202
-    mock_session.get.return_value.__aenter__.return_value = mock_response
+    mock_bgg_session.get.return_value = mock_response(status=202)
 
-    with patch(
-        "custom_components.bgg_sync.config_flow.async_get_clientsession",
-        return_value=mock_session,
-    ), caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.WARNING):
         errors = await validate_input(hass, data)
 
     await hass.async_block_till_done()
@@ -267,7 +238,7 @@ async def test_validate_input_logic_202_warning(hass, caplog):
     assert "BGG returned 202 Accepted" in caplog.text
 
 
-async def test_validate_input_password_check(hass):
+async def test_validate_input_password_check(hass, mock_bgg_session):
     """Test validate_input logic: Password required check."""
     data = {
         CONF_BGG_USERNAME: "user",
@@ -276,12 +247,11 @@ async def test_validate_input_password_check(hass):
         # Missing password
     }
 
-    # We mock get_clientsession too just in case it were called,
-    # but logic should return before that. To be safe/clean:
-    with patch("custom_components.bgg_sync.config_flow.async_get_clientsession"):
-        errors = await validate_input(hass, data)
-        # We generally don't care if it's called or not, just that we get the error
-        # and no exception is raised.
+    # we don't need to patch async_get_clientsession again as mock_bgg_session handles it
+    # But actually, the logic fails before creating session.
+    # The fixture mock_bgg_session is already providing the mock.
+
+    errors = await validate_input(hass, data)
 
     await hass.async_block_till_done()
     assert errors.get(CONF_BGG_PASSWORD) == "password_required_for_logging"

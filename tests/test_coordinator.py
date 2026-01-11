@@ -1,43 +1,23 @@
 """Tests for BGG Data Update Coordinator."""
-import os
 import logging
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock
 import pytest
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from custom_components.bgg_sync.coordinator import BggDataUpdateCoordinator
 from aiohttp import ClientError
 
 
-def load_sample(filename):
-    """Load sample XML from the samples directory."""
-    path = os.path.join(os.path.dirname(__file__), "samples", filename)
-    with open(path, "rb") as f:
-        return f.read()
-
-
-# Helper to create a mock response context manager
-def mock_response(content=b"", status=200, exc=None):
-    mock = AsyncMock()
-    mock.status = status
-    mock.text.return_value = (
-        content.decode("utf-8") if isinstance(content, bytes) else content
-    )
-    if exc:
-        mock.__aenter__.side_effect = exc
-    else:
-        mock.__aenter__.return_value = mock
-    return mock
-
-
-async def test_coordinator_data_update(hass):
+async def test_coordinator_data_update(
+    hass, sample_loader, mock_response, mock_bgg_session
+):
     """Test the coordinator successfully fetches and parses data using real samples."""
     coordinator = BggDataUpdateCoordinator(
         hass, "test_user", "test_pass", "test_token", [822]
     )
 
-    xml_plays = load_sample("plays.xml")
-    xml_collection = load_sample("collection.xml")
-    xml_thing = load_sample("thing_822.xml")
+    xml_plays = sample_loader("plays.xml")
+    xml_collection = sample_loader("collection.xml")
+    xml_thing = sample_loader("thing_822.xml")
 
     def side_effect(url, **kwargs):
         if "plays" in url:
@@ -48,16 +28,11 @@ async def test_coordinator_data_update(hass):
             return mock_response(xml_thing)
         return mock_response(status=404)
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
     # Login mock
-    mock_session.post.return_value = mock_response(status=200)
+    mock_bgg_session.post.return_value = mock_response(status=200)
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        coordinator.data = await coordinator._async_update_data()
+    coordinator.data = await coordinator._async_update_data()
 
     assert coordinator.data["counts"]["owned_boardgames"] > 0
     assert coordinator.data["total_plays"] > 0
@@ -68,7 +43,9 @@ async def test_coordinator_data_update(hass):
     await hass.async_block_till_done()
 
 
-async def test_coordinator_parsing_corner_cases(hass, caplog):
+async def test_coordinator_parsing_corner_cases(
+    hass, caplog, mock_response, mock_bgg_session
+):
     """Test XML parsing edge cases for 100% coverage."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [1, 2, 3, 4])
 
@@ -118,13 +95,9 @@ async def test_coordinator_parsing_corner_cases(hass, caplog):
             return mock_response(xml_thing)
         return mock_response(status=404)
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ), caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.WARNING):
         coordinator.data = await coordinator._async_update_data()
 
     assert "Error parsing game details" in caplog.text
@@ -138,7 +111,7 @@ async def test_coordinator_parsing_corner_cases(hass, caplog):
     await hass.async_block_till_done()
 
 
-async def test_coordinator_202_response(hass, caplog):
+async def test_coordinator_202_response(hass, caplog, mock_response, mock_bgg_session):
     """Test handling of 202 accepted response (processing)."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [])
 
@@ -147,13 +120,9 @@ async def test_coordinator_202_response(hass, caplog):
             return mock_response(b"<items></items>")
         return mock_response(status=202)
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ), caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.INFO):
         await coordinator._async_update_data()
 
     assert "BGG is generating play data" in caplog.text
@@ -162,7 +131,7 @@ async def test_coordinator_202_response(hass, caplog):
     await hass.async_block_till_done()
 
 
-async def test_coordinator_401_response(hass, caplog):
+async def test_coordinator_401_response(hass, caplog, mock_response, mock_bgg_session):
     """Test handling of 401 unauthorized response."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [])
 
@@ -171,13 +140,9 @@ async def test_coordinator_401_response(hass, caplog):
             return mock_response(status=401)
         return mock_response(b"<items></items>")
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ), caplog.at_level(logging.ERROR):
+    with caplog.at_level(logging.ERROR):
         await coordinator._async_update_data()
 
     assert "BGG API 401 Unauthorised" in caplog.text
@@ -185,7 +150,9 @@ async def test_coordinator_401_response(hass, caplog):
     await hass.async_block_till_done()
 
 
-async def test_coordinator_unknown_status_code(hass, caplog):
+async def test_coordinator_unknown_status_code(
+    hass, caplog, mock_response, mock_bgg_session
+):
     """Test handling of unexpected status codes."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [])
 
@@ -196,13 +163,9 @@ async def test_coordinator_unknown_status_code(hass, caplog):
             return mock_response(status=403)
         return mock_response(b"<items></items>")
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ), caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.WARNING):
         await coordinator._async_update_data()
 
     assert "Plays API returned status 500" in caplog.text
@@ -211,7 +174,7 @@ async def test_coordinator_unknown_status_code(hass, caplog):
     await hass.async_block_till_done()
 
 
-async def test_coordinator_malformed_xml(hass, caplog):
+async def test_coordinator_malformed_xml(hass, caplog, mock_response, mock_bgg_session):
     """Test handling of malformed XML."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [123])
 
@@ -220,13 +183,9 @@ async def test_coordinator_malformed_xml(hass, caplog):
             return mock_response(b"Not XML")
         return mock_response(b"<items></items>")
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ), caplog.at_level(logging.ERROR):
+    with caplog.at_level(logging.ERROR):
         try:
             await coordinator._async_update_data()
         except Exception:
@@ -235,7 +194,9 @@ async def test_coordinator_malformed_xml(hass, caplog):
     await hass.async_block_till_done()
 
 
-async def test_coordinator_thing_malformed_xml(hass, caplog):
+async def test_coordinator_thing_malformed_xml(
+    hass, caplog, mock_response, mock_bgg_session
+):
     """Test malformed XML specifically in the Thing API."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [123])
 
@@ -248,13 +209,9 @@ async def test_coordinator_thing_malformed_xml(hass, caplog):
             return mock_response(b"<items></items>")
         return mock_response(status=404)
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ), caplog.at_level(logging.ERROR):
+    with caplog.at_level(logging.ERROR):
         with pytest.raises(UpdateFailed):
             await coordinator._async_update_data()
 
@@ -263,7 +220,9 @@ async def test_coordinator_thing_malformed_xml(hass, caplog):
     await hass.async_block_till_done()
 
 
-async def test_coordinator_xml_with_bad_items(hass, caplog):
+async def test_coordinator_xml_with_bad_items(
+    hass, caplog, mock_response, mock_bgg_session
+):
     """Test XML that is well-formed but contains unexpected structures."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [])
 
@@ -278,13 +237,9 @@ async def test_coordinator_xml_with_bad_items(hass, caplog):
             return mock_response(b"<plays total='0'></plays>")
         return mock_response(b"<items></items>")
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ), caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.WARNING):
         await coordinator._async_update_data()
 
     assert "Error parsing collection item" in caplog.text
@@ -292,7 +247,7 @@ async def test_coordinator_xml_with_bad_items(hass, caplog):
     await hass.async_block_till_done()
 
 
-async def test_coordinator_expansion_counting(hass):
+async def test_coordinator_expansion_counting(hass, mock_response, mock_bgg_session):
     """Test that expansions are counted correctly."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [])
 
@@ -321,14 +276,9 @@ async def test_coordinator_expansion_counting(hass):
             return mock_response(b"<plays total='0'></plays>")
         return mock_response(b"<items></items>")
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        coordinator.data = await coordinator._async_update_data()
+    coordinator.data = await coordinator._async_update_data()
 
     assert coordinator.data["counts"]["owned_expansions"] == 1
     assert coordinator.data["counts"]["owned_boardgames"] == 1
@@ -337,75 +287,55 @@ async def test_coordinator_expansion_counting(hass):
     await hass.async_block_till_done()
 
 
-async def test_coordinator_login_logic(hass, caplog):
+async def test_coordinator_login_logic(hass, caplog, mock_response, mock_bgg_session):
     """Test login logic."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
 
     # 1. No password, login skipped
-    mock_session = MagicMock()
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        await coordinator._login()
-        assert coordinator.logged_in is False
+    await coordinator._login()
+    assert coordinator.logged_in is False
 
     # 2. Login fail
     coordinator = BggDataUpdateCoordinator(hass, "test_user", "wrong_pass", None, [])
+    mock_bgg_session.post.return_value = mock_response(exc=ClientError())
 
-    mock_session = MagicMock()
-    mock_session.post.return_value = mock_response(exc=ClientError())
-
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ), caplog.at_level(logging.ERROR):
+    with caplog.at_level(logging.ERROR):
         await coordinator._login()
 
     assert "Login failed for test_user" in caplog.text
 
     # 3. Login success
-    mock_session.post.return_value = mock_response(status=200)
+    mock_bgg_session.post.return_value = mock_response(status=200)
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        await coordinator._login()
+    await coordinator._login()
 
     assert coordinator.logged_in is True
 
     await hass.async_block_till_done()
 
 
-async def test_coordinator_login_path_in_update(hass):
+async def test_coordinator_login_path_in_update(hass, mock_response, mock_bgg_session):
     """Test that _login is called during update if conditions met."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", "password", None, [])
 
-    mock_session = MagicMock()
-    mock_session.post.return_value = mock_response(status=200)
+    mock_bgg_session.post.return_value = mock_response(status=200)
 
     # Needs to handle both post (login) and get (data)
-
     def get_side_effect(url, **kwargs):
         if "plays" in url:
             return mock_response(b"<plays></plays>")
         return mock_response(b"<items></items>")
 
-    mock_session.get.side_effect = get_side_effect
+    mock_bgg_session.get.side_effect = get_side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        await coordinator._async_update_data()
+    await coordinator._async_update_data()
 
     assert coordinator.logged_in is True
 
     await hass.async_block_till_done()
 
 
-async def test_coordinator_api_failure(hass):
+async def test_coordinator_api_failure(hass, mock_response, mock_bgg_session):
     """Test total API failure raises UpdateFailed."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [])
 
@@ -418,20 +348,17 @@ async def test_coordinator_api_failure(hass):
             return m
         return mock_response(b"<items></items>")
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        with pytest.raises(UpdateFailed):
-            await coordinator._async_update_data()
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
 
     await hass.async_block_till_done()
 
 
-async def test_coordinator_collection_message_202(hass, caplog):
+async def test_coordinator_collection_message_202(
+    hass, caplog, mock_response, mock_bgg_session
+):
     """Test collection returning message tag (202 processing)."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
 
@@ -444,13 +371,9 @@ async def test_coordinator_collection_message_202(hass, caplog):
             return mock_response(b"<plays></plays>")
         return mock_response(b"<items></items>")
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ), caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.INFO):
         await coordinator._async_update_data()
 
     assert "BGG is (202) processing collection" in caplog.text
@@ -458,14 +381,15 @@ async def test_coordinator_collection_message_202(hass, caplog):
     await hass.async_block_till_done()
 
 
-async def test_coordinator_thing_batch_failure(hass, caplog):
+async def test_coordinator_thing_batch_failure(
+    hass, caplog, mock_response, mock_bgg_session
+):
     """Test failure in one batch of thing requests."""
     coordinator = BggDataUpdateCoordinator(
         hass, "test_user", None, None, list(range(1, 25))
     )
 
     ids_1 = ",".join(str(i) for i in range(1, 21))
-    # ids_2 = ",".join(str(i) for i in range(21, 25)) # Not needed for matching if strict
 
     def side_effect(url, **kwargs):
         if ids_1 in url:
@@ -476,13 +400,9 @@ async def test_coordinator_thing_batch_failure(hass, caplog):
             return mock_response(b"<items></items>")
         return mock_response(b"<items></items>")
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ), caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.WARNING):
         await coordinator._async_update_data()
 
     assert "Thing API failed for batch" in caplog.text
@@ -490,7 +410,7 @@ async def test_coordinator_thing_batch_failure(hass, caplog):
     await hass.async_block_till_done()
 
 
-async def test_coordinator_full_counts(hass):
+async def test_coordinator_full_counts(hass, mock_response, mock_bgg_session):
     """Test all count types."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
 
@@ -509,14 +429,9 @@ async def test_coordinator_full_counts(hass):
             return mock_response(b"<plays></plays>")
         return mock_response(b"<items></items>")
 
-    mock_session = MagicMock()
-    mock_session.get.side_effect = side_effect
+    mock_bgg_session.get.side_effect = side_effect
 
-    with patch(
-        "custom_components.bgg_sync.coordinator.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        coordinator.data = await coordinator._async_update_data()
+    coordinator.data = await coordinator._async_update_data()
 
     c = coordinator.data["counts"]
     assert c["wishlist"] == 1
@@ -526,3 +441,45 @@ async def test_coordinator_full_counts(hass):
     assert c["preordered"] == 1
 
     await hass.async_block_till_done()
+
+
+async def test_thing_api_xml_parse_error(hass, mock_bgg_session):
+    """Test handling of XML parse error in Thing API response."""
+    # We need to manually construct the side_effect because the fixture returns a factory,
+    # but the test logic in coordinator calls session.get() multiple times.
+    # The factory isn't directly usable in side_effect list unless called.
+
+    # Helpers to create mock responses using the logic similar to the fixture but inline or by reusing fixture if possible.
+    # Actually, we can just grab the factory from the conftest if we wanted, but here we can just create AsyncMocks.
+    def make_resp(content, status=200):
+        m = AsyncMock()
+        m.status = status
+        m.text.return_value = content
+        m.__aenter__.return_value = m
+        return m
+
+    mock_bgg_session.get.side_effect = [
+        # 1. Plays: Success
+        make_resp('<plays total="10"></plays>'),
+        # 2. Collection: Success (returns item 123)
+        make_resp(
+            '<items><item objectid="123" subtype="boardgame"><name>G</name><status own="1"/></item></items>'
+        ),
+        # 3. Collection (Expansions): Empty
+        make_resp("<items></items>"),
+        # 4. Specific Game Plays (for ID 123)
+        make_resp('<plays total="5"></plays>'),
+        # 5. Thing API (Batch): Returns invalid XML to trigger the specific exception line
+        make_resp("<start><unclosed_tag>"),
+    ]
+
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [123])
+
+    # We expect the update to complete without raising an exception (it's caught and logged),
+    # but the error should be logged.
+    data = await coordinator._async_update_data()
+
+    # Verify that we still got the collection data even though Thing API failed
+    assert 123 in data["collection"]
+    # The 'game_details' would be populated from the collection data initially
+    assert data["game_details"][123]["name"] == "G"

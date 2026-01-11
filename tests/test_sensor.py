@@ -16,11 +16,10 @@ from custom_components.bgg_sync.const import (
 )
 
 
-async def test_sensor_setup(hass):
+async def test_sensor_setup(hass, mock_coordinator):
     """Test setting up the sensors."""
     # Mock coordinator data
-    coordinator = MagicMock()
-    coordinator.data = {
+    mock_coordinator.data = {
         "total_plays": 100,
         "last_play": {"game": "Catan", "date": "2023-01-01", "game_id": 13},
         "total_collection": 50,
@@ -37,14 +36,14 @@ async def test_sensor_setup(hass):
     }
 
     # 1. BggPlaysSensor
-    plays_sensor = BggPlaysSensor(coordinator)
+    plays_sensor = BggPlaysSensor(mock_coordinator)
     assert plays_sensor.state == 100
     assert plays_sensor.extra_state_attributes[ATTR_LAST_PLAY]["game"] == "Catan"
     assert plays_sensor.extra_state_attributes[ATTR_LAST_PLAY]["game"] == "Catan"
     assert plays_sensor.icon == "mdi:dice-multiple"
 
     # 1.5 BggLastSyncSensor
-    last_sync_sensor = BggLastSyncSensor(coordinator)
+    last_sync_sensor = BggLastSyncSensor(mock_coordinator)
     assert last_sync_sensor.native_value is None  # Initially None if not set
     assert last_sync_sensor.icon == "mdi:clock-check-outline"
     assert last_sync_sensor.device_class == "timestamp"
@@ -57,16 +56,16 @@ async def test_sensor_setup(hass):
     from datetime import datetime
 
     now = datetime.now()
-    coordinator.data["last_sync"] = now
+    mock_coordinator.data["last_sync"] = now
     assert last_sync_sensor.native_value == now
 
     # 2. BggCollectionSensor
-    coll_sensor = BggCollectionSensor(coordinator)
+    coll_sensor = BggCollectionSensor(mock_coordinator)
     assert coll_sensor.state == 50
 
     # 3. BggCollectionCountSensor (Counts)
     count_sensor = BggCollectionCountSensor(
-        coordinator, "owned_boardgames", "Games Owned", "mdi:checkerboard"
+        mock_coordinator, "owned_boardgames", "Games Owned", "mdi:checkerboard"
     )
     assert count_sensor.state == 40
     assert count_sensor.name == "Games Owned"
@@ -74,7 +73,7 @@ async def test_sensor_setup(hass):
     # 4. BggGameSensor
     # Create one with custom metadata
     game_sensor = BggGameSensor(
-        coordinator,
+        mock_coordinator,
         13,
         {
             CONF_NFC_TAG: "abc",
@@ -92,31 +91,30 @@ async def test_sensor_setup(hass):
     assert game_sensor.icon is None
 
     # Test BggGameSensor fallback image
-    game_sensor_no_custom = BggGameSensor(coordinator, 13, {})
+    game_sensor_no_custom = BggGameSensor(mock_coordinator, 13, {})
     assert game_sensor_no_custom.entity_picture == "http://image.com"
 
     # Test BggGameSensor no image at all -> use icon
-    coordinator.data["game_details"][13]["image"] = None
-    game_sensor_no_img = BggGameSensor(coordinator, 13, {})
+    mock_coordinator.data["game_details"][13]["image"] = None
+    game_sensor_no_img = BggGameSensor(mock_coordinator, 13, {})
     assert game_sensor_no_img.entity_picture is None
     assert game_sensor_no_img.icon == "mdi:dice-multiple"
 
 
-async def test_sensor_game_not_in_collection_exclusion(hass):
+async def test_sensor_game_not_in_collection_exclusion(hass, mock_coordinator):
     """Test proper handling of game not in collection (coll_id exclusion)."""
-    coordinator = MagicMock()
-    coordinator.data = {
+    mock_coordinator.data = {
         "game_details": {99: {"name": "Test Game", "image": "img", "coll_id": None}},
         "game_plays": {99: 0},
     }
 
-    sensor = BggGameSensor(coordinator, 99, {})
+    sensor = BggGameSensor(mock_coordinator, 99, {})
     attrs = sensor.extra_state_attributes
 
     assert "coll_id" not in attrs
 
 
-async def test_sensor_legacy_csv_format(hass):
+async def test_sensor_legacy_csv_format(hass, mock_coordinator):
     """Test we can handle legacy CSV format if passed into setup."""
     from custom_components.bgg_sync.sensor import async_setup_entry
     from custom_components.bgg_sync.const import CONF_GAMES, DOMAIN
@@ -125,15 +123,14 @@ async def test_sensor_legacy_csv_format(hass):
     entry.options = {CONF_GAMES: "123, 456"}
     entry.entry_id = "test"
 
-    coordinator = MagicMock()
-    coordinator.data = {
+    mock_coordinator.data = {
         "game_details": {
             123: {"name": "Game 1", "image": "i"},
             456: {"name": "Game 2", "image": "i"},
         },
         "game_plays": {123: 1, 456: 0},
     }
-    hass.data = {DOMAIN: {"test": coordinator}}
+    hass.data = {DOMAIN: {"test": mock_coordinator}}
 
     async_add_entities = MagicMock()
 
@@ -147,7 +144,7 @@ async def test_sensor_legacy_csv_format(hass):
     assert 456 in ids
 
 
-async def test_sensor_game_creation_error(hass, caplog):
+async def test_sensor_game_creation_error(hass, caplog, mock_coordinator):
     """Test generic exception during sensor creation logic."""
     from custom_components.bgg_sync.sensor import async_setup_entry
     from custom_components.bgg_sync.const import CONF_GAME_DATA, DOMAIN
@@ -157,8 +154,7 @@ async def test_sensor_game_creation_error(hass, caplog):
     entry.options = {CONF_GAME_DATA: {"invalid": {}}}
     entry.entry_id = "test"
 
-    coordinator = MagicMock()
-    hass.data = {DOMAIN: {"test": coordinator}}
+    hass.data = {DOMAIN: {"test": mock_coordinator}}
     async_add_entities = MagicMock()
 
     with caplog.at_level(logging.WARNING):
@@ -167,7 +163,7 @@ async def test_sensor_game_creation_error(hass, caplog):
     assert "Error creating sensor for game ID invalid" in caplog.text
 
 
-async def test_sensor_import_collection_option(hass):
+async def test_sensor_import_collection_option(hass, mock_coordinator):
     """Test importing entire collection via option."""
     from custom_components.bgg_sync.sensor import async_setup_entry
     from custom_components.bgg_sync.const import CONF_GAME_DATA, DOMAIN
@@ -177,14 +173,13 @@ async def test_sensor_import_collection_option(hass):
     entry.options = {CONF_IMPORT_COLLECTION: True, CONF_GAME_DATA: {"100": {}}}
     entry.entry_id = "test"
 
-    coordinator = MagicMock()
-    coordinator.data = {
+    mock_coordinator.data = {
         # Collection has 100 (explicit) and 200 (implicit)
         "collection": {100: {}, 200: {}},
         "game_details": {100: {"name": "Game 100"}, 200: {"name": "Game 200"}},
         "game_plays": {},
     }
-    hass.data = {DOMAIN: {"test": coordinator}}
+    hass.data = {DOMAIN: {"test": mock_coordinator}}
 
     async_add_entities = MagicMock()
 
@@ -203,17 +198,16 @@ async def test_sensor_import_collection_option(hass):
     assert len(ids) == 2
 
 
-async def test_sensor_game_name_fallback(hass):
+async def test_sensor_game_name_fallback(hass, mock_coordinator):
     """Test BggGameSensor uses fallback name if details missing on init."""
-    coordinator = MagicMock()
-    coordinator.data = {
+    mock_coordinator.data = {
         "game_details": {},  # NO details yet
         "game_plays": {},
     }
 
-    sensor = BggGameSensor(coordinator, 999, {})
+    sensor = BggGameSensor(mock_coordinator, 999, {})
     assert sensor.name == "BGG Game 999"
 
     # Later details update
-    coordinator.data["game_details"] = {999: {"name": "Late Game"}}
+    mock_coordinator.data["game_details"] = {999: {"name": "Late Game"}}
     assert sensor.name == "Late Game"
