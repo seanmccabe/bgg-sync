@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0-beta.12] - 2026-01-11
+## [1.2.0] - 2026-01-11
 
 ### Added
 - **Force Sync Button:** Added a button entity to manually trigger a synchronisation with BoardGameGeek.
