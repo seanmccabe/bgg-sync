@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-01-11
+
+### Added
+- **Force Sync Button:** Added a button entity to manually trigger a synchronisation with BoardGameGeek.
+- **Last Sync Sensor:** Added a diagnostic sensor (`bgg_last_sync`) to track the timestamp of the last successful data fetch.
+- **String Localization:** Added friendly localised names for the services.
+- **Player Details in Recording:** The `record_play` service now supports passing player names, winners, scores, positions, colors, and ratings to BoardGameGeek.
+- **Enhanced Recording Metadata:** Added support for `location`, `incomplete`, and `nowinstats` flags in the `record_play` service.
+
+### Changed
+- **Asyncio Migration:** Fully migrated network calls to `aiohttp` to prevent thread blocking.
+- **Plays Sensor Attributes:** The `last_play` attribute is now "flattened" into top-level attributes on the Plays sensor:
+    - `game`
+    - `bgg_id`
+    - `date`
+    - `comment` (Cleaned of BBCode)
+    - `expansions` (Extracted from comment text)
+    - `winners` (List of winners' names)
+    - `players` (List of players' usernames or names)
+    - `image` (Fetched from game metadata if available)
+    - *NOTE:* The original nested `last_play` attribute dictionary has been removed.
+- **Dependencies:** Removed `requests` dependency.
+- **Cleaned Up:** Improved code comments and removed unused imports.
+- **Removed:** `search_spotify` from the service schema.
+
+### Fixed
+- **Clean Attribute Text**: Fixed issue where BGG BBCode tags (e.g. `[thing=...]`) were appearing in sensor attributes (last play comments).
+- **Service Stability:** Moved blocking legacy recording logic into an executor job to maintain Home Assistant performance standards while ensuring session persistence.
+- **Track Game Service:** Fixed an issue where using the `track_game` service could cause existing sensors to become unavailable if BGG returned a processing status (202).
+
+
 ## [1.1.1] - 2026-01-11
 
 ### Changed

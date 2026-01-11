@@ -1,9 +1,11 @@
 import logging
+import re
 import xml.etree.ElementTree as ET
 from datetime import timedelta
 
-import requests
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import BASE_URL, BGG_URL
@@ -33,7 +35,6 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         self.password = password
         self.api_token = api_token
         self.game_ids = game_ids
-        self.session = requests.Session()
         self.logged_in = False
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
@@ -42,11 +43,66 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         if self.api_token:
             self.headers["Authorization"] = f"Bearer {self.api_token}"
 
-    def _login(self):
-        """Login to BGG if password is provided and we don't have an API token."""
-        # If we have an API token, we don't likely need website session login for FETCHING data.
-        # But we might need it for recording plays if we implement that via website scraping.
-        # For now, let's keep login separate.
+    def _clean_bgg_text(self, text: str | None) -> str:
+        """Clean BGG BBCode from text."""
+        if not text:
+            return ""
+        # Remove tags with properties like [thing=123]Name[/thing] -> Name
+        text = re.sub(r"\[\w+=[^\]]*\](.*?)\[\/\w+\]", r"\1", text)
+        # Remove simple tags like [b]Bold[/b] -> Bold
+        text = re.sub(r"\[/?\w+\]", "", text)
+        return text.strip()
+
+    def _extract_expansions(self, text: str | None) -> list[str]:
+        """Extract expansion names from BBCode in comments."""
+        if not text:
+            return []
+
+        expansions = []
+        if "Played with expansions" in text:
+            # Split by lines to only capture things in the relevant block if desired
+            lines = text.split("\n")
+            in_expansions = False
+            for line in lines:
+                if "Played with expansions" in line:
+                    in_expansions = True
+                    continue
+                if in_expansions:
+                    # simplistic extraction of content between tags
+                    matches = re.findall(r"\[thing=\d+\](.*?)\[/thing\]", line)
+                    expansions.extend(matches)
+
+        return expansions
+
+    def _extract_winners(self, play_node: ET.Element) -> list[str]:
+        """Extract lists of winners from the play."""
+        winners = []
+        players = play_node.find("players")
+        if players is not None:
+            for player in players.findall("player"):
+                if player.get("win") == "1":
+                    name = player.get("name") or player.get("username")
+                    if name:
+                        winners.append(name)
+        return winners
+
+    def _extract_players(self, play_node: ET.Element) -> list[str]:
+        """Extract list of players (username or name)."""
+        player_list = []
+        players = play_node.find("players")
+        if players is not None:
+            for player in players.findall("player"):
+                # Use username if available, otherwise name
+                val = player.get("username")
+                if not val:
+                    val = player.get("name")
+
+                if val:
+                    player_list.append(val)
+        return player_list
+
+    async def _login(self):
+        """Login to BGG if password is provided."""
         if not self.password:
             return
 
@@ -54,24 +110,24 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         login_data = {"username": self.username, "password": self.password}
 
         try:
-            resp = self.session.post(login_url, data=login_data, timeout=10)
-            _LOGGER.debug(
-                "Login attempt for %s: %s | Body: %s",
-                self.username,
-                resp.status_code,
-                resp.text[:200],
-            )
-            self.logged_in = True
+            session = async_get_clientsession(self.hass)
+            async with session.post(login_url, data=login_data, timeout=10) as resp:
+                _LOGGER.debug(
+                    "Login attempt for %s: %s | Body: %s",
+                    self.username,
+                    resp.status,
+                    (await resp.text())[:200],
+                )
+                self.logged_in = True
         except Exception as err:
             _LOGGER.error("Login failed for %s: %s", self.username, err)
 
     async def _async_update_data(self):
         """Fetch data from BGG."""
-        # We only need website login if we lack an API token OR if we simply want to try it as backup.
-        # The docs say token is REQUIRED. So relying on password alone is deprecated/broken.
-        # But we'll leave the logic in case it helps for some users or endpoints.
         if self.password and not self.logged_in and not self.api_token:
-            await self.hass.async_add_executor_job(self._login)
+            await self._login()
+
+        session = async_get_clientsession(self.hass)
 
         try:
             data = {
@@ -83,82 +139,90 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
             # 1. Fetch Plays (Total and Last Play)
             plays_url = f"{BASE_URL}/plays?username={self.username}"
-            resp = await self.hass.async_add_executor_job(
-                lambda: self.session.get(plays_url, headers=self.headers, timeout=10)
-            )
-            # Log simplified response status
-            _LOGGER.debug(
-                "Plays API response for %s: %s", self.username, resp.status_code
-            )
 
-            if resp.status_code == 200:
-                root = ET.fromstring(resp.content)
-                data["total_plays"] = int(root.get("total", 0))
+            async with session.get(plays_url, headers=self.headers, timeout=10) as resp:
+                if resp.status == 200:
+                    text = await resp.text()
+                    root = await self.hass.async_add_executor_job(ET.fromstring, text)
+                    data["total_plays"] = int(root.get("total", 0))
 
-                # Get last play details
-                play_nodes = root.findall("play")
-                if play_nodes:
-                    last_play = play_nodes[0]
-                    item = last_play.find("item")
-                    data["last_play"] = {
-                        "game": item.get("name") if item is not None else "Unknown",
-                        "game_id": item.get("objectid") if item is not None else None,
-                        "date": last_play.get("date"),
-                        "comment": last_play.findtext("comments", ""),
-                    }
-            elif resp.status_code == 202:
-                _LOGGER.info(
-                    "BGG is generating play data for %s, will try again next poll",
-                    self.username,
-                )
-            elif resp.status_code == 401:
-                _LOGGER.error(
-                    "BGG API 401 Unauthorised for %s. Ensure you have a valid API Token configured.",
-                    self.username,
-                )
-            else:
-                _LOGGER.warning(
-                    "Plays API returned status %s for %s",
-                    resp.status_code,
-                    self.username,
-                )
+                    # Get last play details
+                    play_nodes = root.findall("play")
+                    if play_nodes:
+                        last_play = play_nodes[0]
+                        item = last_play.find("item")
+                        logger_comment = last_play.findtext("comments", "")
+
+                        data["last_play"] = {
+                            "game": item.get("name") if item is not None else "Unknown",
+                            "game_id": item.get("objectid")
+                            if item is not None
+                            else None,
+                            "date": last_play.get("date"),
+                            "comment": self._clean_bgg_text(logger_comment),
+                            "expansions": self._extract_expansions(logger_comment),
+                            "winners": self._extract_winners(last_play),
+                            "players": self._extract_players(last_play),
+                        }
+                elif resp.status == 202:
+                    _LOGGER.info(
+                        "BGG is generating play data for %s, will try again next poll",
+                        self.username,
+                    )
+                elif resp.status == 401:
+                    _LOGGER.error(
+                        "BGG API 401 Unauthorised for %s. Ensure you have a valid API Token configured.",
+                        self.username,
+                    )
+                else:
+                    _LOGGER.warning(
+                        "Plays API returned status %s for %s",
+                        resp.status,
+                        self.username,
+                    )
 
             # 2. Fetch Collection (Games AND Expansions)
-            # BGG API defaults to only returning boardgames if no subtype is specified.
-            # We must fetch boardgames and expansions explicitly to get both.
-
             all_items = []
 
             for subtype in ["boardgame", "boardgameexpansion"]:
                 coll_url = f"{BASE_URL}/collection?username={self.username}&subtype={subtype}&stats=1"
-                resp = await self.hass.async_add_executor_job(
-                    lambda: self.session.get(coll_url, headers=self.headers, timeout=60)
-                )
 
-                if resp.status_code == 200:
-                    root = ET.fromstring(resp.content)
-                    if root.tag != "message":
-                        items = root.findall("item")
-                        all_items.extend(items)
-                    else:
+                async with session.get(
+                    coll_url, headers=self.headers, timeout=60
+                ) as resp:
+                    if resp.status == 200:
+                        text = await resp.text()
+                        root = await self.hass.async_add_executor_job(
+                            ET.fromstring, text
+                        )
+                        if root.tag != "message":
+                            items = root.findall("item")
+                            all_items.extend(items)
+                        else:
+                            _LOGGER.info(
+                                "BGG is (202) processing collection for %s (%s), retrying",
+                                self.username,
+                                subtype,
+                            )
+                            raise UpdateFailed(
+                                "BGG is processing collection, retrying later"
+                            )
+                    elif resp.status == 202:
                         _LOGGER.info(
-                            "BGG is (202) processing collection for %s (%s), will try again next poll",
+                            "BGG is (202) generating collection for %s (%s), retrying",
                             self.username,
                             subtype,
                         )
-                elif resp.status_code == 202:
-                    _LOGGER.info(
-                        "BGG is (202) generating collection data for %s (%s)",
-                        self.username,
-                        subtype,
-                    )
-                else:
-                    _LOGGER.warning(
-                        "Collection API returned status %s for %s (%s)",
-                        resp.status_code,
-                        self.username,
-                        subtype,
-                    )
+                        raise UpdateFailed(
+                            "BGG is processing collection, retrying later"
+                        )
+                    else:
+                        _LOGGER.warning(
+                            "Collection API returned status %s for %s (%s)",
+                            resp.status,
+                            self.username,
+                            subtype,
+                        )
 
             data["collection"] = {}
             data["game_details"] = {}
@@ -174,10 +238,8 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 "preordered": 0,
             }
 
-            # Process Merged Items
+            # Process collection items
             if all_items:
-                # Deduplication might be needed if an item appears in both lists (unlikely but possible with weird BGG data)
-                # But our dict storage handles overwrite by ID naturally.
                 for item in all_items:
                     try:
                         # Parse Status
@@ -302,15 +364,17 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 game_url = (
                     f"{BASE_URL}/plays?username={self.username}&id={game_id}&type=thing"
                 )
-                resp = await self.hass.async_add_executor_job(
-                    lambda: self.session.get(game_url, headers=self.headers, timeout=10)
-                )
-                if resp.status_code == 200:
-                    root = ET.fromstring(resp.content)
-                    data["game_plays"][game_id] = int(root.get("total", 0))
+                async with session.get(
+                    game_url, headers=self.headers, timeout=10
+                ) as resp:
+                    if resp.status == 200:
+                        text = await resp.text()
+                        root = await self.hass.async_add_executor_job(
+                            ET.fromstring, text
+                        )
+                        data["game_plays"][game_id] = int(root.get("total", 0))
 
             # 4. Fetch Rich Game Details for ALL games (Collection + Tracked)
-            # Combine IDs from collection and explicit tracking
             all_ids = set(self.game_ids)
             if "collection" in data:
                 all_ids.update(data["collection"].keys())
@@ -320,7 +384,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 "BGG Sync: Processing rich details for %d games...", len(all_ids_list)
             )
 
-            # Batch requests to avoid URL length limits. BGG 400s if URL is too long.
+            # Batch requests to avoid URL length limits
             BATCH_SIZE = 20
 
             for i in range(0, len(all_ids_list), BATCH_SIZE):
@@ -330,23 +394,23 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 thing_url = f"{BASE_URL}/thing?id={ids_str}&stats=1"
                 _LOGGER.debug("Requesting batch %d: %s", i, thing_url)
 
-                resp = await self.hass.async_add_executor_job(
-                    lambda: self.session.get(
-                        thing_url, headers=self.headers, timeout=30
-                    )
-                )
+                async with session.get(
+                    thing_url, headers=self.headers, timeout=30
+                ) as resp:
+                    if resp.status != 200:
+                        _LOGGER.warning(
+                            "Thing API failed for batch starting at index %s. Status: %s",
+                            i,
+                            resp.status,
+                        )
+                        continue
 
-                if resp.status_code != 200:
-                    _LOGGER.warning(
-                        "Thing API failed for batch starting at index %s. Status: %s",
-                        i,
-                        resp.status_code,
-                    )
-                    continue
-
-                if resp.status_code == 200:
+                    # If status is 200, parse content
+                    text = await resp.text()
                     try:
-                        root = ET.fromstring(resp.content)
+                        root = await self.hass.async_add_executor_job(
+                            ET.fromstring, text
+                        )
                         for item in root.findall("item"):
                             try:
                                 g_id = int(item.get("id"))
@@ -361,7 +425,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                                             break
 
                                 existing = data["game_details"].get(g_id, {})
-                                # Parse Name (Thing API uses name element with value attribute)
+                                # Parse primary name from Thing API
                                 name = existing.get("name")
                                 for n in item.findall("name"):
                                     if n.get("type") == "primary":
@@ -381,20 +445,8 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
                                 weight_val = get_r_val("averageweight")
                                 rating_val = get_r_val("average")
-                                image_val = item.findtext("image")
 
-                                # Log values for debugging (using DEBUG level so it appears in logs)
-                                _LOGGER.debug(
-                                    "BGG Sync Update: %s (ID %s) | W: %s | R: %s | Img: %s | Yr: %s | Rank: %s",
-                                    name,
-                                    g_id,
-                                    weight_val,
-                                    rating_val,
-                                    "Yes" if image_val else "No",
-                                    item.findtext("yearpublished"),
-                                    rank_val,
-                                )
-
+                                # Store metadata
                                 existing.update(
                                     {
                                         "name": name,
@@ -448,6 +500,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     except Exception as e:
                         _LOGGER.error("Failed to parse BGG XML response: %s", e)
 
+            data["last_sync"] = dt_util.now()
             return data
 
         except Exception as err:

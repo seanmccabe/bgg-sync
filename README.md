@@ -1,6 +1,6 @@
-# <img src="brand_images/icon.png" width="40"/> BoardGameGeek Sync (BGG Sync)
+# <img src="brand_images/icon.png" width="40"/> BoardGameGeek  (BGG Sync)
 
-[![GitHub Release][releases-shield]][releases] [![License][license-shield]](LICENSE) [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration) ![Tests](https://github.com/seanmccabe/bgg-sync/actions/workflows/tests.yaml/badge.svg)
+[![GitHub Release][releases-shield]][releases] [![License][license-shield]](LICENSE) [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration) [![Tests](https://img.shields.io/github/actions/workflow/status/seanmccabe/bgg-sync/tests.yaml?style=for-the-badge)](https://github.com/seanmccabe/bgg-sync/actions/workflows/tests.yaml)
 
 BoardGameGeek (BGG) integration for Home Assistant. A robust custom component for verifying and tracking plays and collection data. It creates sensors for your play counts and collection, and provides a service to record plays directly from Home Assistant.
 
@@ -27,7 +27,7 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 
 1.  Ensure you have [HACS](https://hacs.xyz/) installed.
 2.  Add this repository as a [Custom Repository](https://hacs.xyz/docs/faq/custom_repositories) in HACS.
-3.  Search for "BGG Sync" and download it.
+3.  Search for "BoardGameGeek" (or BGG Sync) and download it.
 4.  Restart Home Assistant.
 
 *Note: Submission to HACS is in the works.*
@@ -36,7 +36,7 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 ## Configuration
 
 1.  Go to **Settings** > **Devices & Services**.
-2.  Click **Add Integration** and search for "BGG Sync".
+2.  Click **Add Integration** and search for "BoardGameGeek".
 3.  Enter your **BGG Username**.
 4.  **API Token (Required for Sensors)**:
     *   Go to [BGG Applications](https://boardgamegeek.com/applications).
@@ -53,7 +53,7 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 IF you want to turn on Collection tracking and not just via the to-do list, you will need to enable the "Track Collection" option.
 
 1.  Go to **Settings** > **Devices & Services**.
-2.  Search for "BGG Sync" and click on it.
+2.  Search for "BoardGameGeek" and click on it.
 3.  Click on the Cog icon for the user you want to enable collection tracking for.
 4.  Enable the "Track Collection" option.
 5.  Submit.
@@ -126,13 +126,21 @@ data:
   date: "2026-01-01"
   length: 60
   comments: "Great game!"
+  location: "Home"
+  incomplete: false
+  nowinstats: false
   players:
-    - name: "Player One"
-      username: "bgg_user_1"
-      win: true
-    - name: "Player Two"
-      username: "bgg_user_2"
-      win: false
+    - name: "seanmccabe"
+      winner: true
+      score: 100
+      position: "1"
+      color: "Blue"
+      rating: 10
+    - name: "Kelly"
+      winner: false
+      score: 85
+      position: "2"
+      color: "Red"
 ```
 
 **Arguments:**
@@ -142,10 +150,16 @@ data:
 *   `date` (Optional): Date of the play (YYYY-MM-DD). Defaults to today.
 *   `length` (Optional): Duration in minutes.
 *   `comments` (Optional): Comments about the play.
+*   `location` (Optional): Where the game was played (e.g., "Home", "Tabletop Cafe").
+*   `incomplete` (Optional): Boolean (true/false). Set to true if the play was not finished.
+*   `nowinstats` (Optional): Boolean (true/false). Set to true to exclude this play from win statistics.
 *   `players` (Optional): A list of players. Each player can have:
-    *   `name`: Display name.
-    *   `username`: BGG Username (optional).
-    *   `win`: Boolean (true/false) for winner status.
+    *   `name`: Display name or BGG Username.
+    *   `winner`: Boolean (true/false) for winner status.
+    *   `score`: Player score (string or number).
+    *   `position`: Starting position or rank (string).
+    *   `color`: Player color or team (string).
+    *   `rating`: Player's rating for the game (1-10 integer).
 
 ## Troubleshooting
 
@@ -176,7 +190,7 @@ The following features are planned for upcoming releases:
 
 ## Development & Testing
 
-This project includes a comprehensive test suite covering the coordinator, config flow, sensors, and services. We aim for high test coverage (100%) to ensure reliability.
+This project includes a comprehensive test suite covering the coordinator, config flow, sensors, and services. We aim for high test coverage (>= 99%) to ensure reliability.
 
 To run the tests locally:
 
@@ -199,7 +213,7 @@ To run the tests locally:
 
 ## Disclaimer & Trademarks
 
-**BoardGameGeek Sync (BGG Sync)** is an independent open-source project and is not affiliated with, maintained by, or endorsed by BoardGameGeek, LLC.
+**BoardGameGeek (BGG Sync)** is an independent open-source project and is not affiliated with, maintained by, or endorsed by BoardGameGeek, LLC.
 
 * **BoardGameGeek** and **BGG** are registered trademarks of BoardGameGeek, LLC.
 * This integration uses the BoardGameGeek XML API2 but is not an official BoardGameGeek product.

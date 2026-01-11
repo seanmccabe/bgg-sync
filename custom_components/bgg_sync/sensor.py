@@ -3,17 +3,16 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DOMAIN,
     BGG_URL,
-    ATTR_LAST_PLAY,
     ATTR_GAME_RANK,
     ATTR_GAME_YEAR,
     ATTR_GAME_WEIGHT,
@@ -57,6 +56,7 @@ async def async_setup_entry(
         BggCollectionCountSensor(
             coordinator, "preordered", "Preordered", "mdi:clock-outline"
         ),
+        BggLastSyncSensor(coordinator),
     ]
 
     # Parse game data from options
@@ -80,24 +80,10 @@ async def async_setup_entry(
         except ValueError:
             _LOGGER.warning("Error creating sensor for game ID %s: invalid ID", game_id)
 
-    # If enabled, also add sensors for the ENTIRE collection
-    # We do this by checking the coordinator data, which holds the full collection.
-    # Note: async_setup_entry runs before the first refresh is FINISHED usually,
-    # so coordinator.data might be empty.
-    # However, if we want to add entities dynamically, we really should assume
-    # the user enabled it and we will add them once data arrives?
-    # Or simpler: we rely on config_entry options.
-    # But we don't know the IDs yet if data is empty!
-    # Ideally, we should add them after the first refresh.
-    # But HA encourages adding entities in setup.
-    # Let's check if coordinator has data (it might if first refresh is awaited in logic above setup).
-    # Wait, in __init__.py we call `await coordinator.async_config_entry_first_refresh()` BEFORE forwarding.
-    # So coordinator.data IS available here!
-
+    # Add entire collection if enabled
     if entry.options.get(CONF_IMPORT_COLLECTION, False):
         collection = coordinator.data.get("collection", {})
         for g_id in collection:
-            # Avoid duplicates if already tracked above
             if g_id not in game_data and str(g_id) not in game_data:
                 entities.append(BggGameSensor(coordinator, g_id, {}))
 
@@ -134,13 +120,32 @@ class BggPlaysSensor(BggBaseSensor):
 
     @property
     def native_value(self) -> int:
-        """Return the state of the sensor."""
         return self.coordinator.data.get("total_plays", 0)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the state attributes."""
-        return {ATTR_LAST_PLAY: self.coordinator.data.get("last_play")}
+        last_play = self.coordinator.data.get("last_play") or {}
+        # Try to find image for the game if we have it in cache
+        game_id = last_play.get("game_id")
+        image = None
+        if game_id:
+            try:
+                g_id = int(game_id)
+                details = self.coordinator.data.get("game_details", {}).get(g_id, {})
+                image = details.get("image")
+            except (ValueError, TypeError):
+                pass
+
+        return {
+            "game": last_play.get("game"),
+            "bgg_id": last_play.get("game_id"),
+            "date": last_play.get("date"),
+            "comment": last_play.get("comment"),
+            "expansions": last_play.get("expansions"),
+            "winners": last_play.get("winners"),
+            "players": last_play.get("players"),
+            "image": image,
+        }
 
 
 class BggCollectionSensor(BggBaseSensor):
@@ -156,7 +161,6 @@ class BggCollectionSensor(BggBaseSensor):
 
     @property
     def native_value(self) -> int | None:
-        """Return the state of the sensor."""
         # Use the explicit 'owned' count if available, else standard total
         return self.coordinator.data.get("counts", {}).get(
             "owned", self.coordinator.data.get("total_collection")
@@ -178,8 +182,25 @@ class BggCollectionCountSensor(BggBaseSensor):
 
     @property
     def native_value(self) -> int:
-        """Return the count."""
         return self.coordinator.data.get("counts", {}).get(self.key, 0)
+
+
+class BggLastSyncSensor(BggBaseSensor):
+    """Diagnostic sensor for last successful BGG sync."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:clock-check-outline"
+
+    def __init__(self, coordinator: BggDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.username}_last_sync"
+        self._attr_name = "Last Sync"
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get("last_sync")
 
 
 class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
@@ -196,12 +217,9 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         self.game_id = game_id
         self.user_data = user_data
         self._attr_unique_id = f"{coordinator.username}_game_{game_id}"
-        # Try to find name in coordinator data immediately
+
         name = coordinator.data.get("game_details", {}).get(game_id, {}).get("name")
-        if name:
-            self._attr_name = name
-        else:
-            self._attr_name = f"BGG Game {game_id}"
+        self._attr_name = name or f"BGG Game {game_id}"
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.username)},
@@ -212,26 +230,22 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
 
     @property
     def name(self) -> str:
-        """Return the name of the entity."""
         # Allow dynamic name updates if it wasn't available at init
         details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
         return details.get("name") or self._attr_name
 
     @property
     def native_value(self) -> int | None:
-        """Return the state of the sensor (play count)."""
         return self.coordinator.data.get("game_plays", {}).get(self.game_id, 0)
 
     @property
     def icon(self) -> str | None:
-        """Return the icon of the sensor, unless a picture is present."""
         if self.entity_picture:
             return None
         return "mdi:dice-multiple"
 
     @property
     def entity_picture(self) -> str | None:
-        """Return the entity picture."""
         # 1. User override
         if cust := self.user_data.get(CONF_CUSTOM_IMAGE):
             return cust
@@ -245,7 +259,6 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the rich attributes."""
         details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
 
         attrs = {

@@ -3,7 +3,6 @@ from unittest.mock import MagicMock
 import pytest
 from homeassistant.components.todo import TodoItem
 from custom_components.bgg_sync.const import DOMAIN, CONF_ENABLE_SHELF_TODO
-from custom_components.bgg_sync.coordinator import BggDataUpdateCoordinator
 from custom_components.bgg_sync.todo import (
     async_setup_entry,
     BggCollectionTodoList,
@@ -11,12 +10,11 @@ from custom_components.bgg_sync.todo import (
 
 
 @pytest.fixture
-def mock_coordinator(hass):
-    """Mock the BGG Coordinator."""
-    coordinator = MagicMock(spec=BggDataUpdateCoordinator)
-    coordinator.hass = hass
-    coordinator.username = "test_user"
-    coordinator.data = {
+def populated_coordinator(hass, mock_coordinator):
+    """Mock the BGG Coordinator with specific data for todo tests."""
+    mock_coordinator.hass = hass
+    mock_coordinator.username = "test_user"
+    mock_coordinator.data = {
         "collection": {
             822: {
                 "bgg_id": 822,
@@ -38,11 +36,13 @@ def mock_coordinator(hass):
             },
         }
     }
-    return coordinator
+    return mock_coordinator
 
 
 async def test_todo_creation(hass, mock_coordinator):
     """Test standard to-do list creation."""
+    mock_coordinator.username = "test_user"  # required for unique_id
+
     entry = MagicMock()
     entry.entry_id = "123"
     entry.options = {CONF_ENABLE_SHELF_TODO: True}
@@ -78,9 +78,9 @@ async def test_todo_creation_disabled(hass, mock_coordinator):
     assert not async_add_entities.called
 
 
-async def test_todo_items_content(hass, mock_coordinator):
+async def test_todo_items_content(hass, populated_coordinator):
     """Test to-do list items are populated correctly."""
-    todo_list = BggCollectionTodoList(mock_coordinator)
+    todo_list = BggCollectionTodoList(populated_coordinator)
 
     items = todo_list.todo_items
 

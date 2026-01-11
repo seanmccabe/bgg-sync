@@ -1,39 +1,109 @@
 {
-    "config": {
-        "step": {
-            "user": {
-                "title": "BGG Sync",
-                "data": {
-                    "bgg_username": "BoardGameGeek Username",
-                    "bgg_password": "BGG Password (required for logging plays)",
-                    "bgg_api_token": "BGG API Token (Required)",
-                    "games": "Track Additional Games (Not in Collection, comma separated IDs, e.g. 822 for Carcassonne)",
-                    "enable_logging": "Enable Play Logging?"
-                }
-            }
-        },
-        "error": {
-            "cannot_connect": "Failed to connect to BoardGameGeek",
-            "invalid_auth": "Invalid API Token or Authentication",
-            "password_required_for_logging": "Password is required if play logging is enabled",
-            "unknown": "Unexpected error"
-        },
-        "abort": {
-            "already_configured": "Account is already configured"
-        }
+  "config": {
+    "abort": {
+      "already_configured": "Account is already configured"
     },
-    "options": {
-        "step": {
-            "init": {
-                "data": {
-                    "bgg_password": "BGG Password (required for logging plays)",
-                    "bgg_api_token": "BGG API Token (Required)",
-                    "games": "Track Additional Games (Not in Collection, comma separated IDs)",
-                    "import_collection": "Track Collection",
-                    "enable_shelf_todo": "Enable Shelf Todo List",
-                    "enable_logging": "Enable Play Logging (Requires Password)"
-                }
-            }
-        }
+    "error": {
+      "cannot_connect": "Failed to connect to BoardGameGeek",
+      "invalid_auth": "Invalid API Token or Authentication",
+      "password_required_for_logging": "Password is required if play logging is enabled",
+      "unknown": "Unexpected error"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "bgg_api_token": "BGG API Token (Required)",
+          "bgg_password": "BGG Password (required for logging plays)",
+          "bgg_username": "BoardGameGeek Username",
+          "enable_logging": "Enable Play Logging?",
+          "games": "Track Additional Games (Not in Collection, comma separated IDs, e.g. 822 for Carcassonne)"
+        },
+        "title": "BGG Sync"
+      }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "bgg_api_token": "BGG API Token (Required)",
+          "bgg_password": "BGG Password (required for logging plays)",
+          "enable_logging": "Enable Play Logging (Requires Password)",
+          "enable_shelf_todo": "Enable Shelf Todo List",
+          "games": "Track Additional Games (Not in Collection, comma separated IDs)",
+          "import_collection": "Track Collection"
+        }
+      }
+    }
+  },
+  "services": {
+    "record_play": {
+      "name": "Record Play",
+      "description": "Record a play on BoardGameGeek",
+      "fields": {
+        "comments": {
+          "name": "Comments",
+          "description": "Any additional notes about the play"
+        },
+        "date": {
+          "name": "Date",
+          "description": "Date of the play (YYYY-MM-DD)"
+        },
+        "game_id": {
+          "name": "Game ID",
+          "description": "The BGG ID of the game"
+        },
+        "incomplete": {
+          "name": "Incomplete",
+          "description": "Whether the play was finished"
+        },
+        "length": {
+          "name": "Duration",
+          "description": "Length of the play in minutes"
+        },
+        "location": {
+          "name": "Location",
+          "description": "Where the game was played"
+        },
+        "nowinstats": {
+          "name": "No Win Stats",
+          "description": "If true, this play will not be included in win statistics"
+        },
+        "players": {
+          "name": "Players",
+          "description": "List of players including name, winner, score, position, color, and rating."
+        },
+        "username": {
+          "name": "Username",
+          "description": "BGG Username to log as"
+        }
+      }
+    },
+    "track_game": {
+      "name": "Track Game",
+      "description": "Add a game to tracking or update its metadata",
+      "fields": {
+        "bgg_id": {
+          "name": "BGG ID",
+          "description": "The BGG ID of the game"
+        },
+        "custom_image": {
+          "name": "Custom Image",
+          "description": "Custom image URL for the sensor"
+        },
+        "music": {
+          "name": "Music",
+          "description": "Spotify URI or URL to play when scanned"
+        },
+        "nfc_tag": {
+          "name": "NFC Tag",
+          "description": "NFC Tag ID to associate with this game"
+        },
+        "username": {
+          "name": "Username",
+          "description": "BGG Username (optional)"
+        }
+      }
+    }
+  }
 }
