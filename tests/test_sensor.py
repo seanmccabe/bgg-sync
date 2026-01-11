@@ -41,6 +41,7 @@ async def test_sensor_setup(hass, mock_coordinator):
     assert plays_sensor.extra_state_attributes[ATTR_LAST_PLAY]["game"] == "Catan"
     assert plays_sensor.extra_state_attributes[ATTR_LAST_PLAY]["game"] == "Catan"
     assert plays_sensor.icon == "mdi:dice-multiple"
+    assert plays_sensor.attribution == "Data provided by BoardGameGeek"
 
     # 1.5 BggLastSyncSensor
     last_sync_sensor = BggLastSyncSensor(mock_coordinator)

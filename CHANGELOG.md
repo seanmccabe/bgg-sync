@@ -4,10 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [1.2.0-beta.2] - 2026-01-10
 
-### Changed
+### Added
 - **Last Sync Sensor:** Added a diagnostic sensor (`bgg_last_sync`) to track the timestamp of the last successful data fetch.
+
+### Changed
 - **Asyncio Migration:** Fully migrated network calls to `aiohttp` to prevent thread blocking.
 - **Dependencies:** Removed `requests` dependency.
+
+## [1.1.1] - 2026-01-11
+
+### Changed
+- **Branding**: Updated integration name to "BoardGameGeek" for consistency.
+- **Timezone Accuracy**: `record_play` service now uses Home Assistant's local time instead of UTC to ensure plays are logged on the correct date.
+- **Attribution**: Added "Data provided by BoardGameGeek" attribution to all entities.
 
 ## [1.1.0] - 2026-01-10
 

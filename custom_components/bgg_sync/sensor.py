@@ -109,6 +109,7 @@ class BggBaseSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
     """Base sensor for BGG."""
 
     _attr_has_entity_name = True
+    _attr_attribution = "Data provided by BoardGameGeek"
 
     def __init__(self, coordinator: BggDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
@@ -205,6 +206,7 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
     """Sensor for a specific game with rich metadata."""
 
     _attr_icon = "mdi:dice-multiple"
+    _attr_attribution = "Data provided by BoardGameGeek"
 
     def __init__(
         self, coordinator: BggDataUpdateCoordinator, game_id: int, user_data: dict

@@ -6,6 +6,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN,
@@ -213,9 +214,7 @@ async def async_record_play_on_bgg(
             # This is a simplified version; in a real library it would be more robust.
             # Most BGG play loggers use the PHP endpoint.
             if not date:
-                from datetime import datetime
-
-                date = datetime.now().strftime("%Y-%m-%d")
+                date = dt_util.now().strftime("%Y-%m-%d")
 
             data = {
                 "action": "save",
@@ -226,8 +225,6 @@ async def async_record_play_on_bgg(
                 "comments": comments or "",
                 "ajax": 1,
             }
-            # Add players if provided
-            # This part is highly dependent on BGG's internal form structure.
 
             # Update Referer for the play post
             headers["Referer"] = f"{BGG_URL}/boardgame/{game_id}"

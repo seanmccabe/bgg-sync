@@ -292,24 +292,30 @@ async def test_record_play_logic_default_date(hass):
     from datetime import datetime
 
     mock_session = MagicMock()
+    # Mocking the context manager of the session
     mock_session.__aenter__.return_value = mock_session
 
     mock_response = AsyncMock()
     mock_response.status = 200
     mock_response.text.return_value = "success"
+    # Mocking the context manager of the post response
     mock_session.post.return_value.__aenter__.return_value = mock_response
+
+    fixed_now = datetime(2023, 5, 20, 12, 0, 0)
 
     with patch(
         "custom_components.bgg_sync.async_create_clientsession",
         return_value=mock_session,
-    ):
+    ), patch("custom_components.bgg_sync.dt_util.now") as mock_now:
+        mock_now.return_value = fixed_now
+
         await async_record_play_on_bgg(hass, "u", "p", 123, None, None, None, [])
 
         calls = mock_session.post.call_args_list
         play_call = calls[1]
         data = play_call[1]["data"]
-        expected = datetime.now().strftime("%Y-%m-%d")
-        assert data["playdate"] == expected
+        # Expect fixed date
+        assert data["playdate"] == "2023-05-20"
 
 
 async def test_record_play_logic_login_fail(hass, caplog):
