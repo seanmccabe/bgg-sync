@@ -444,13 +444,6 @@ async def test_coordinator_full_counts(hass, mock_response, mock_bgg_session):
 
 
 async def test_thing_api_xml_parse_error(hass, mock_bgg_session):
-    """Test handling of XML parse error in Thing API response."""
-    # We need to manually construct the side_effect because the fixture returns a factory,
-    # but the test logic in coordinator calls session.get() multiple times.
-    # The factory isn't directly usable in side_effect list unless called.
-
-    # Helpers to create mock responses using the logic similar to the fixture but inline or by reusing fixture if possible.
-    # Actually, we can just grab the factory from the conftest if we wanted, but here we can just create AsyncMocks.
     def make_resp(content, status=200):
         m = AsyncMock()
         m.status = status
@@ -475,14 +468,37 @@ async def test_thing_api_xml_parse_error(hass, mock_bgg_session):
 
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [123])
 
-    # We expect the update to complete without raising an exception (it's caught and logged),
-    # but the error should be logged.
+    # Verify data is partially populated despite Thing API failure
     data = await coordinator._async_update_data()
-
-    # Verify that we still got the collection data even though Thing API failed
     assert 123 in data["collection"]
-    # The 'game_details' would be populated from the collection data initially
     assert data["game_details"][123]["name"] == "G"
+
+
+def test_coordinator_extract_methods(hass):
+    """Test the extraction helper methods directly for coverage."""
+    coord = BggDataUpdateCoordinator(hass, "test", None, None, [])
+
+    # Test _extract_expansions with None/Empty
+    assert coord._extract_expansions(None) == []
+    assert coord._extract_expansions("") == []
+
+    # Test _extract_players with missing username (fallback to name)
+    import xml.etree.ElementTree as ET
+
+    xml = """
+    <play>
+        <players>
+            <player username="" name="Bob" />
+            <player username="Alice" name="Alice Real" />
+        </players>
+    </play>
+    """
+    node = ET.fromstring(xml)
+    players = coord._extract_players(node)
+    # Alice should be "Alice", Bob should be "Bob"
+    assert "Alice" in players
+    assert "Bob" in players
+    assert len(players) == 2
 
 
 async def test_clean_bgg_text(hass):

@@ -222,6 +222,8 @@ async def test_sensor_plays_flattened_attributes(hass, mock_coordinator):
         "date": "2024-01-01",
         "comment": "Nice game",
         "expansions": ["Inns & Cathedrals"],
+        "winners": ["Alice"],
+        "players": ["Alice", "Bob"],
     }
     # Mock game details for image lookup
     mock_coordinator.data = {
@@ -244,4 +246,27 @@ async def test_sensor_plays_flattened_attributes(hass, mock_coordinator):
     assert attrs["date"] == "2024-01-01"
     assert attrs["comment"] == "Nice game"
     assert attrs["expansions"] == ["Inns & Cathedrals"]
+    assert attrs["winners"] == ["Alice"]
+    assert attrs["players"] == ["Alice", "Bob"]
     assert attrs["image"] == "http://image.url"
+
+
+async def test_sensor_plays_invalid_game_id(hass, mock_coordinator):
+    """Test Play Sensor handles invalid game_id gracefully (coverage)."""
+    mock_coordinator.data = {
+        "total_plays": 5,
+        "last_play": {
+            "game": "Unknown",
+            "game_id": "not_an_int",  # invalid ID
+            "date": "2024-01-01",
+        },
+        "game_details": {},
+        "collection": {},
+    }
+    from custom_components.bgg_sync.sensor import BggPlaysSensor
+
+    sensor = BggPlaysSensor(mock_coordinator)
+    attrs = sensor.extra_state_attributes
+
+    assert attrs["bgg_id"] == "not_an_int"
+    assert attrs["image"] is None

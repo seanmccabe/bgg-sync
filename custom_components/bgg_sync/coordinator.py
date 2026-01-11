@@ -74,11 +74,35 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
         return expansions
 
+    def _extract_winners(self, play_node: ET.Element) -> list[str]:
+        """Extract lists of winners from the play."""
+        winners = []
+        players = play_node.find("players")
+        if players is not None:
+            for player in players.findall("player"):
+                if player.get("win") == "1":
+                    name = player.get("name") or player.get("username")
+                    if name:
+                        winners.append(name)
+        return winners
+
+    def _extract_players(self, play_node: ET.Element) -> list[str]:
+        """Extract list of players (username or name)."""
+        player_list = []
+        players = play_node.find("players")
+        if players is not None:
+            for player in players.findall("player"):
+                # Use username if available, otherwise name
+                val = player.get("username")
+                if not val:
+                    val = player.get("name")
+
+                if val:
+                    player_list.append(val)
+        return player_list
+
     async def _login(self):
-        """Login to BGG if password is provided and we don't have an API token."""
-        # If we have an API token, we don't likely need website session login for FETCHING data.
-        # But we might need it for recording plays if we implement that via website scraping.
-        # For now, let's keep login separate.
+        """Login to BGG if password is provided."""
         if not self.password:
             return
 
@@ -100,9 +124,6 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Fetch data from BGG."""
-        # We only need website login if we lack an API token OR if we simply want to try it as backup.
-        # The docs say token is REQUIRED. So relying on password alone is deprecated/broken.
-        # But we'll leave the logic in case it helps for some users or endpoints.
         if self.password and not self.logged_in and not self.api_token:
             await self._login()
 
@@ -120,11 +141,6 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
             plays_url = f"{BASE_URL}/plays?username={self.username}"
 
             async with session.get(plays_url, headers=self.headers, timeout=10) as resp:
-                # Log simplified response status
-                _LOGGER.debug(
-                    "Plays API response for %s: %s", self.username, resp.status
-                )
-
                 if resp.status == 200:
                     text = await resp.text()
                     root = await self.hass.async_add_executor_job(ET.fromstring, text)
@@ -145,6 +161,8 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                             "date": last_play.get("date"),
                             "comment": self._clean_bgg_text(logger_comment),
                             "expansions": self._extract_expansions(logger_comment),
+                            "winners": self._extract_winners(last_play),
+                            "players": self._extract_players(last_play),
                         }
                 elif resp.status == 202:
                     _LOGGER.info(
@@ -164,9 +182,6 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     )
 
             # 2. Fetch Collection (Games AND Expansions)
-            # BGG API defaults to only returning boardgames if no subtype is specified.
-            # We must fetch boardgames and expansions explicitly to get both.
-
             all_items = []
 
             for subtype in ["boardgame", "boardgameexpansion"]:
@@ -217,10 +232,8 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 "preordered": 0,
             }
 
-            # Process Merged Items
+            # Process collection items
             if all_items:
-                # Deduplication might be needed if an item appears in both lists (unlikely but possible with weird BGG data)
-                # But our dict storage handles overwrite by ID naturally.
                 for item in all_items:
                     try:
                         # Parse Status
@@ -356,7 +369,6 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                         data["game_plays"][game_id] = int(root.get("total", 0))
 
             # 4. Fetch Rich Game Details for ALL games (Collection + Tracked)
-            # Combine IDs from collection and explicit tracking
             all_ids = set(self.game_ids)
             if "collection" in data:
                 all_ids.update(data["collection"].keys())
@@ -366,7 +378,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 "BGG Sync: Processing rich details for %d games...", len(all_ids_list)
             )
 
-            # Batch requests to avoid URL length limits. BGG 400s if URL is too long.
+            # Batch requests to avoid URL length limits
             BATCH_SIZE = 20
 
             for i in range(0, len(all_ids_list), BATCH_SIZE):
@@ -407,7 +419,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                                             break
 
                                 existing = data["game_details"].get(g_id, {})
-                                # Parse Name (Thing API uses name element with value attribute)
+                                # Parse primary name from Thing API
                                 name = existing.get("name")
                                 for n in item.findall("name"):
                                     if n.get("type") == "primary":
@@ -427,20 +439,8 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
                                 weight_val = get_r_val("averageweight")
                                 rating_val = get_r_val("average")
-                                image_val = item.findtext("image")
 
-                                # Log values for debugging (using DEBUG level so it appears in logs)
-                                _LOGGER.debug(
-                                    "BGG Sync Update: %s (ID %s) | W: %s | R: %s | Img: %s | Yr: %s | Rank: %s",
-                                    name,
-                                    g_id,
-                                    weight_val,
-                                    rating_val,
-                                    "Yes" if image_val else "No",
-                                    item.findtext("yearpublished"),
-                                    rank_val,
-                                )
-
+                                # Store metadata
                                 existing.update(
                                     {
                                         "name": name,

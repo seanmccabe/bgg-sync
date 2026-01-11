@@ -46,19 +46,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     api_token = conf.get(CONF_API_TOKEN)
 
-    # 1. Parse legacy CSV list
+    # Parse game IDs from configuration
     game_ids_from_csv = []
     game_ids_raw = conf.get(CONF_GAMES, "")
     for x in game_ids_raw.split(","):
         if x.strip().isdigit():
             game_ids_from_csv.append(int(x.strip()))
 
-    # 2. Parse new dict
     game_data = conf.get(CONF_GAME_DATA, {})
-
-    # 3. Merge: ensure all CSV games are in the dict keys
-    # We pass ONLY the list of IDs to the coordinator for fetching
-    # The sensor platform reads the full dict for metadata
     all_game_ids = list(set(game_ids_from_csv + [int(k) for k in game_data.keys()]))
 
     coordinator = BggDataUpdateCoordinator(
@@ -156,10 +151,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             new_options = dict(entry.options)
             current_data = new_options.get(CONF_GAME_DATA, {}).copy()
 
-            # Add/Update the game entry
-            metadata = current_data.get(
-                str(bgg_id), {}
-            )  # Keys are strings in JSON/Config
+            # Update the game entry
+            metadata = current_data.get(str(bgg_id), {})
             # If it was an empty dict from previous legacy import, it might be there
 
             if nfc:
@@ -181,9 +174,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 async def async_record_play_on_bgg(
     hass, username, password, game_id, date, length, comments, players
 ):
-    """BGG play recording logic using aiohttp."""
-    # BGG uses a login process then a post to geekplay.php
-    # We use a local session (via async_create_clientsession) to keep cookies isolated (PHP session) and ensure we don't leak auth.
+    """BGG play recording logic."""
     async with async_create_clientsession(hass) as session:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -209,10 +200,8 @@ async def async_record_play_on_bgg(
                     )
                     return
 
+            # Save play via PHP endpoint
             play_url = f"{BGG_URL}/geekplay.php"
-            # BGG Play data format is complex, often involves XML or specific form fields.
-            # This is a simplified version; in a real library it would be more robust.
-            # Most BGG play loggers use the PHP endpoint.
             if not date:
                 date = dt_util.now().strftime("%Y-%m-%d")
 

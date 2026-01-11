@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0-beta.5] - 2026-01-11
+## [1.2.0-beta.6] - 2026-01-11
 
 ### Added
 - **Force Sync Button:** Added a button entity to manually trigger a synchronisation with BoardGameGeek.
@@ -16,9 +16,12 @@ All notable changes to this project will be documented in this file.
     - `date`
     - `comment` (Cleaned of BBCode)
     - `expansions` (Extracted from comment text)
+    - `winners` (List of winners' names)
+    - `players` (List of players' usernames or names)
     - `image` (Fetched from game metadata if available)
     - *NOTE:* The original nested `last_play` attribute dictionary has been removed.
 - **Dependencies:** Removed `requests` dependency.
+- **Cleaned Up:** Improved code comments and removed unused imports.
 
 ### Fixed
 - **Clean Attribute Text**: Fixed issue where BGG BBCode tags (e.g. `[thing=...]`) were appearing in sensor attributes (last play comments).
