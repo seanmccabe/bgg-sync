@@ -35,5 +35,63 @@
                 }
             }
         }
+    },
+    "services": {
+        "record_play": {
+            "name": "Record Play",
+            "description": "Record a play on BoardGameGeek",
+            "fields": {
+                "username": {
+                    "name": "Username",
+                    "description": "BGG Username to log as"
+                },
+                "game_id": {
+                    "name": "Game ID",
+                    "description": "The BGG ID of the game"
+                },
+                "date": {
+                    "name": "Date",
+                    "description": "Date of the play (YYYY-MM-DD)"
+                },
+                "length": {
+                    "name": "Length",
+                    "description": "Length of the play in minutes"
+                },
+                "comments": {
+                    "name": "Comments",
+                    "description": "Comments for the play"
+                },
+                "players": {
+                    "name": "Players",
+                    "description": "List of players and if they won"
+                }
+            }
+        },
+        "track_game": {
+            "name": "Track Game",
+            "description": "Add a game to tracking or update its metadata (NFC, Music, Image)",
+            "fields": {
+                "bgg_id": {
+                    "name": "Game ID",
+                    "description": "The BGG ID of the game"
+                },
+                "nfc_tag": {
+                    "name": "NFC Tag",
+                    "description": "NFC Tag ID to associate with this game"
+                },
+                "music": {
+                    "name": "Music",
+                    "description": "Spotify (or other service) URI or URL to play when scanned"
+                },
+                "custom_image": {
+                    "name": "Custom Image",
+                    "description": "Custom image URL for the sensor"
+                },
+                "username": {
+                    "name": "Username",
+                    "description": "BGG Username (optional, defaults to first configured)"
+                }
+            }
+        }
     }
 }

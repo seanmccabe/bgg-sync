@@ -2,11 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0-beta.7] - 2026-01-11
+## [1.2.0-beta.8] - 2026-01-11
 
 ### Added
 - **Force Sync Button:** Added a button entity to manually trigger a synchronisation with BoardGameGeek.
 - **Last Sync Sensor:** Added a diagnostic sensor (`bgg_last_sync`) to track the timestamp of the last successful data fetch.
+- **String Localization:** Added friendly localised names for the services.
 
 ### Changed
 - **Asyncio Migration:** Fully migrated network calls to `aiohttp` to prevent thread blocking.
@@ -22,6 +23,7 @@ All notable changes to this project will be documented in this file.
     - *NOTE:* The original nested `last_play` attribute dictionary has been removed.
 - **Dependencies:** Removed `requests` dependency.
 - **Cleaned Up:** Improved code comments and removed unused imports.
+- **Removed:** `search_spotify` from the service schema.
 
 ### Fixed
 - **Clean Attribute Text**: Fixed issue where BGG BBCode tags (e.g. `[thing=...]`) were appearing in sensor attributes (last play comments).

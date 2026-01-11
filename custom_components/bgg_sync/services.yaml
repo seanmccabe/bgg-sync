@@ -1,4 +1,5 @@
 record_play:
+  name: Record Play
   description: Record a play on BoardGameGeek
   fields:
     username:
@@ -39,6 +40,7 @@ record_play:
         object:
 
 track_game:
+  name: Track Game
   description: Add a game to tracking or update its metadata (NFC, Music, Image)
   fields:
     bgg_id:
@@ -56,11 +58,6 @@ track_game:
     music:
       description: Spotify URI or URL to play when scanned
       example: "spotify:playlist:37i9dQZF1DXdbXr1tM54sF"
-      selector:
-        text:
-    search_spotify:
-      description: Alternative to music, will search spotify for this term
-      example: "Gloomhaven Soundtrack"
       selector:
         text:
     custom_image:

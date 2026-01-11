@@ -122,7 +122,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             bgg_id = call.data["bgg_id"]
             # Handle optional args
             nfc = call.data.get("nfc_tag")
-            music = call.data.get("music") or call.data.get("search_spotify")
+            music = call.data.get("music")
             custom_image = call.data.get("custom_image")
 
             _LOGGER.info(
