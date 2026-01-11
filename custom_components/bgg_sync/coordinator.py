@@ -4,6 +4,7 @@ from datetime import timedelta
 
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import BASE_URL, BGG_URL
@@ -462,6 +463,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     except Exception as e:
                         _LOGGER.error("Failed to parse BGG XML response: %s", e)
 
+            data["last_sync"] = dt_util.now()
             return data
 
         except Exception as err:

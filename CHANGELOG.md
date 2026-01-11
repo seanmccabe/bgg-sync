@@ -2,9 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0-beta.2] - 2026-01-10
+## [1.2.0-beta.4] - 2026-01-11
 
 ### Added
+- **Force Sync Button:** Added a button entity to manually trigger a synchronisation with BoardGameGeek.
 - **Last Sync Sensor:** Added a diagnostic sensor (`bgg_last_sync`) to track the timestamp of the last successful data fetch.
 
 ### Changed

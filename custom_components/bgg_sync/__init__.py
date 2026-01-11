@@ -29,7 +29,7 @@ from .coordinator import BggDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.TODO]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.TODO, Platform.BUTTON]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
