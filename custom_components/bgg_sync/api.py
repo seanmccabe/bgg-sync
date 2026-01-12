@@ -167,6 +167,19 @@ class BggClient:
                 _LOGGER.error("Failed to parse game plays XML for %s: %s", game_id, e)
                 return 0
 
+    def _get_xml_val(
+        self, element: ET.Element | None, tag: str, attr: str | None = "value"
+    ) -> str | None:
+        """Helper to safely get value from XML element."""
+        if element is None:
+            return None
+        child = element.find(tag)
+        if child is None:
+            return None
+        if attr:
+            return child.get(attr)
+        return child.text
+
     async def fetch_collection(self, subtype: str = "boardgame") -> dict[str, Any]:
         """Fetch collection for the user."""
         url = f"{XMLAPI2_BASE_URL}/collection?username={self.username}&subtype={subtype}&stats=1"
@@ -190,13 +203,15 @@ class BggClient:
                     g_id = int(item.get("objectid"))
                     subtype_val = item.get("subtype")
                     status = item.find("status")
-
                     stats = item.find("stats")
                     rating = stats.find("rating") if stats is not None else None
-                    ranks = rating.find("ranks") if rating is not None else None
 
+                    # Rank
                     rank_val = "Not Ranked"
-                    if ranks is not None:
+                    if (
+                        rating is not None
+                        and (ranks := rating.find("ranks")) is not None
+                    ):
                         for rank in ranks.findall("rank"):
                             if rank.get("name") == "boardgame":
                                 rank_val = rank.get("value")
@@ -233,27 +248,12 @@ class BggClient:
                             if stats is not None
                             else None,
                             "rank": rank_val,
-                            "rating": rating.find("average").get("value")
-                            if rating is not None and rating.find("average") is not None
-                            else None,
-                            "bayes_rating": rating.find("bayesaverage").get("value")
-                            if rating is not None
-                            and rating.find("bayesaverage") is not None
-                            else None,
-                            "weight": rating.find("averageweight").get("value")
-                            if rating is not None
-                            and rating.find("averageweight") is not None
-                            else None,
-                            "users_rated": rating.find("usersrated").get("value")
-                            if rating is not None
-                            and rating.find("usersrated") is not None
-                            else None,
-                            "stddev": rating.find("stddev").get("value")
-                            if rating is not None and rating.find("stddev") is not None
-                            else None,
-                            "median": rating.find("median").get("value")
-                            if rating is not None and rating.find("median") is not None
-                            else None,
+                            "rating": self._get_xml_val(rating, "average"),
+                            "bayes_rating": self._get_xml_val(rating, "bayesaverage"),
+                            "weight": self._get_xml_val(rating, "averageweight"),
+                            "users_rated": self._get_xml_val(rating, "usersrated"),
+                            "stddev": self._get_xml_val(rating, "stddev"),
+                            "median": self._get_xml_val(rating, "median"),
                             "numowned": stats.get("numowned")
                             if stats is not None
                             else None,
@@ -312,14 +312,7 @@ class BggClient:
                             name = n.get("value")
                             break
 
-                    # Stats
                     ratings = item.find("statistics/ratings")
-
-                    def get_r_val(tag):
-                        if ratings is None:
-                            return None
-                        node = ratings.find(tag)
-                        return node.get("value") if node is not None else None
 
                     parsed_items.append(
                         {
@@ -327,32 +320,20 @@ class BggClient:
                             "name": name,
                             "image": item.findtext("image"),
                             "thumbnail": item.findtext("thumbnail"),
-                            "yearpublished": item.find("yearpublished").get("value")
-                            if item.find("yearpublished") is not None
-                            else None,
-                            "minplayers": item.find("minplayers").get("value")
-                            if item.find("minplayers") is not None
-                            else None,
-                            "maxplayers": item.find("maxplayers").get("value")
-                            if item.find("maxplayers") is not None
-                            else None,
-                            "playingtime": item.find("playingtime").get("value")
-                            if item.find("playingtime") is not None
-                            else None,
-                            "minplaytime": item.find("minplaytime").get("value")
-                            if item.find("minplaytime") is not None
-                            else None,
-                            "maxplaytime": item.find("maxplaytime").get("value")
-                            if item.find("maxplaytime") is not None
-                            else None,
+                            "yearpublished": self._get_xml_val(item, "yearpublished"),
+                            "minplayers": self._get_xml_val(item, "minplayers"),
+                            "maxplayers": self._get_xml_val(item, "maxplayers"),
+                            "playingtime": self._get_xml_val(item, "playingtime"),
+                            "minplaytime": self._get_xml_val(item, "minplaytime"),
+                            "maxplaytime": self._get_xml_val(item, "maxplaytime"),
                             "rank": rank_val,
-                            "weight": get_r_val("averageweight"),
-                            "rating": get_r_val("average"),
-                            "bayes_rating": get_r_val("bayesaverage"),
-                            "users_rated": get_r_val("usersrated"),
-                            "stddev": get_r_val("stddev"),
-                            "median": get_r_val("median"),
-                            "owned": get_r_val("owned"),
+                            "weight": self._get_xml_val(ratings, "averageweight"),
+                            "rating": self._get_xml_val(ratings, "average"),
+                            "bayes_rating": self._get_xml_val(ratings, "bayesaverage"),
+                            "users_rated": self._get_xml_val(ratings, "usersrated"),
+                            "stddev": self._get_xml_val(ratings, "stddev"),
+                            "median": self._get_xml_val(ratings, "median"),
+                            "owned": self._get_xml_val(ratings, "owned"),
                             "type": item.get("type"),
                         }
                     )

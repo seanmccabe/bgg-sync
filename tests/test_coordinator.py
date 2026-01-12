@@ -4,6 +4,7 @@ import pytest
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from custom_components.bgg_sync.coordinator import BggDataUpdateCoordinator
 from aiohttp import ClientError
+from unittest.mock import AsyncMock
 
 
 async def test_coordinator_data_update(
@@ -295,3 +296,91 @@ async def test_coordinator_thing_malformed_xml(
     assert "Failed to parse BGG XML" in caplog.text
 
     await hass.async_block_till_done()
+
+
+async def test_coordinator_full_collection_flags(hass, mock_bgg_session):
+    """Test coordinator correctly increments all collection flags."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
+    # Re-mock client methods directly
+    coordinator.client.fetch_plays = AsyncMock(
+        return_value={"status": 200, "total": 10, "last_play": None}
+    )
+    coordinator.client.fetch_game_plays = AsyncMock(return_value=5)
+    coordinator.client.fetch_thing_details = AsyncMock(return_value=[])
+
+    # Mock collection with all flags
+    item_all_flags = {
+        "objectid": 100,
+        "subtype": "boardgame",
+        "name": "Game 1",
+        "own": True,
+        "wishlist": True,
+        "wanttoplay": True,
+        "wanttobuy": True,
+        "fortrade": True,
+        "preordered": True,
+        "numplays": 5,
+        "image": "img.jpg",
+        "thumbnail": "thumb.jpg",
+        "yearpublished": "2020",
+        "minplayers": "1",
+        "maxplayers": "4",
+        "playingtime": "60",
+        "minplaytime": "60",
+        "maxplaytime": "60",
+        "rank": "1",
+        "rating": "8.0",
+        "bayes_rating": "7.5",
+        "weight": "2.5",
+        "users_rated": "1000",
+        "stddev": "1.0",
+        "median": "8.0",
+        "numowned": "5000",
+        "collid": "12345",
+    }
+    # We return the mocked item only for the first call (boardgame), empty for second
+    coordinator.client.fetch_collection = AsyncMock(
+        side_effect=[
+            {"status": 200, "items": [item_all_flags]},
+            {"status": 200, "items": []},
+        ]
+    )
+
+    data = await coordinator._async_update_data()
+
+    assert data["counts"]["wishlist"] == 1
+    assert data["counts"]["want_to_play"] == 1
+    assert data["counts"]["want_to_buy"] == 1
+    assert data["counts"]["for_trade"] == 1
+    assert data["counts"]["preordered"] == 1
+
+
+async def test_coordinator_plays_processing(hass, mock_bgg_session):
+    """Test coordinator handles 202 status for plays."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
+
+    coordinator.client.fetch_plays = AsyncMock(
+        return_value={"status": 202, "total": 0, "last_play": None}
+    )
+    coordinator.client.fetch_collection = AsyncMock(
+        return_value={"status": 200, "items": []}
+    )
+    coordinator.client.fetch_game_plays = AsyncMock(return_value=0)
+    coordinator.client.fetch_thing_details = AsyncMock(return_value=[])
+
+    data = await coordinator._async_update_data()
+    # Should complete without error, but logging "BGG is generating play data"
+    assert data is not None
+
+
+async def test_coordinator_generic_error(hass, mock_bgg_session):
+    """Test coordinator handles generic exceptions during update."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
+
+    # We must mock the method on the client instance attached to the coordinator
+    coordinator.client.fetch_plays = AsyncMock(side_effect=Exception("Unexpected boom"))
+
+    with pytest.raises(UpdateFailed) as excinfo:
+        await coordinator._async_update_data()
+
+    assert "Error communicating with BGG API" in str(excinfo.value)

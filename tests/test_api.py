@@ -227,3 +227,107 @@ async def test_record_play_error(client, mock_session):
 
     success = await client.record_play(123)
     assert success is False
+
+
+async def test_record_play_exception(client, mock_session):
+    """Test record_play handles generic exceptions."""
+    mock_session.post.side_effect = Exception("Boom")
+    success = await client.record_play(123)
+    assert success is False
+
+
+async def test_fetch_plays_malformed_xml(client, mock_session):
+    """Test fetch_plays handles malformed XML."""
+    mock_resp = AsyncMock()
+    mock_resp.status = 200
+    mock_resp.text.return_value = "<invalid xml"
+    mock_resp.__aenter__.return_value = mock_resp
+    mock_session.get.return_value = mock_resp
+
+    result = await client.fetch_plays()
+    assert result["status"] == 200
+    assert result["total"] == 0
+    assert result["last_play"] is None
+
+
+async def test_fetch_game_plays_error(client, mock_session):
+    """Test fetch_game_plays errors."""
+    mock_resp = AsyncMock()
+    mock_resp.__aenter__.return_value = mock_resp
+
+    # Non-200 status
+    mock_resp.status = 500
+    mock_session.get.return_value = mock_resp
+    assert await client.fetch_game_plays(123) == 0
+
+    # Malformed XML
+    mock_resp.status = 200
+    mock_resp.text.return_value = "<bad>"
+    mock_session.get.return_value = mock_resp
+    assert await client.fetch_game_plays(123) == 0
+
+
+async def test_fetch_collection_errors(client, mock_session):
+    """Test fetch_collection errors."""
+    mock_resp = AsyncMock()
+    mock_resp.__aenter__.return_value = mock_resp
+
+    # Malformed XML
+    mock_resp.status = 200
+    mock_resp.text.return_value = "<bad>"
+    mock_session.get.return_value = mock_resp
+    result = await client.fetch_collection()
+    assert result["items"] == []
+
+    # Message (202)
+    mock_resp.text.return_value = "<message>Processing</message>"
+    mock_session.get.return_value = mock_resp
+    result = await client.fetch_collection()
+    assert result["status"] == 202
+
+
+async def test_fetch_collection_parsing_error(client, mock_session):
+    """Test fetch_collection item parsing error."""
+    xml_data = """
+    <items>
+        <item objectid="bad_int" subtype="boardgame">
+            <name>Game</name>
+        </item>
+        <item objectid="123" subtype="boardgame">
+            <name>Good Game</name>
+            <status own="1"/>
+        </item>
+    </items>
+    """
+    mock_resp = AsyncMock()
+    mock_resp.status = 200
+    mock_resp.text.return_value = xml_data
+    mock_resp.__aenter__.return_value = mock_resp
+    mock_session.get.return_value = mock_resp
+
+    result = await client.fetch_collection()
+    assert len(result["items"]) == 1
+    assert result["items"][0]["objectid"] == 123
+
+
+async def test_fetch_thing_details_empty(client):
+    """Test fetch_thing_details with no IDs."""
+    assert await client.fetch_thing_details([]) == []
+
+
+async def test_get_xml_val(mock_session):
+    """Test the _get_xml_val helper method."""
+    client = BggClient(mock_session, "test_user")
+
+    # Test None element
+    assert client._get_xml_val(None, "tag") is None
+
+    # Test element with child and attribute
+    root = ET.fromstring('<root><child value="123">Text</child></root>')
+    assert client._get_xml_val(root, "child", "value") == "123"
+
+    # Test element with child and text (attr=None)
+    assert client._get_xml_val(root, "child", None) == "Text"
+
+    # Test element without child
+    assert client._get_xml_val(root, "missing") is None
