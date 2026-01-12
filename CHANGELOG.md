@@ -2,12 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.0-beta.1] - 2026-01-12
+## [1.3.0-beta.2] - 2026-01-12
 
 ### Changed
 - **Architectural Rewrite:** Created a dedicated, fully asynchronous `BggClient` (in `api.py`) to handle all API logic, ensuring strict separation of concerns.
 - **Service Stability:** The new `BggClient` handles login sessions securely and asynchronously, eliminating the need for blocking executor jobs.
-- **Reliability:** Updated test suite to provide robust coverage for the new API client structure.
+- **Reliability:** Maintained 100% test coverage and added robust XML parsing helpers to resolve deprecation warnings and parsing errors.
+- **Internal Cleanup:** Refactored `coordinator.py` to use a helper method for game data mapping, strictly enforcing DRY principles and Type Hinting.
 
 
 ## [1.2.0] - 2026-01-11

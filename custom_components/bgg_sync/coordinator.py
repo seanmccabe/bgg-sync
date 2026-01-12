@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 from datetime import timedelta
 
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -36,6 +37,35 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         self.game_ids = game_ids
         session = async_get_clientsession(hass)
         self.client = BggClient(session, username, password, api_token)
+
+    @staticmethod
+    def _map_item_to_game(item: dict[str, Any]) -> dict[str, Any]:
+        """Map API item to internal game object."""
+        out = {
+            "bgg_id": item.get("objectid") or item.get("id"),
+            "name": item.get("name"),
+            "image": item.get("image"),
+            "thumbnail": item.get("thumbnail"),
+            "year": item.get("yearpublished"),
+            "sub_type": item.get("type") or item.get("subtype"),
+            "min_players": item.get("minplayers"),
+            "max_players": item.get("maxplayers"),
+            "playing_time": item.get("playingtime"),
+            "min_playtime": item.get("minplaytime"),
+            "max_playtime": item.get("maxplaytime"),
+            "rank": item.get("rank"),
+            "rating": item.get("rating"),
+            "bayes_rating": item.get("bayes_rating"),
+            "weight": item.get("weight"),
+            "users_rated": item.get("users_rated"),
+            "stddev": item.get("stddev"),
+            "median": item.get("median"),
+            "owned_by": item.get("numowned") or item.get("owned"),
+            "coll_id": item.get("collid"),
+        }
+        if "numplays" in item:
+            out["numplays"] = str(item["numplays"])
+        return out
 
     async def _async_update_data(self):
         """Fetch data from BGG."""
@@ -132,29 +162,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 if item["preordered"]:
                     data["counts"]["preordered"] += 1
 
-                game_obj = {
-                    "bgg_id": g_id,
-                    "name": item["name"],
-                    "image": item["image"],
-                    "thumbnail": item["thumbnail"],
-                    "year": item["yearpublished"],
-                    "numplays": str(item["numplays"]),
-                    "subtype": subtype,
-                    "min_players": item["minplayers"],
-                    "max_players": item["maxplayers"],
-                    "playing_time": item["playingtime"],
-                    "min_playtime": item["minplaytime"],
-                    "max_playtime": item["maxplaytime"],
-                    "rank": item["rank"],
-                    "rating": item["rating"],
-                    "bayes_rating": item["bayes_rating"],
-                    "weight": item["weight"],
-                    "users_rated": item["users_rated"],
-                    "stddev": item["stddev"],
-                    "median": item["median"],
-                    "owned_by": item["numowned"],
-                    "coll_id": item["collid"],
-                }
+                game_obj = self._map_item_to_game(item)
 
                 data["game_details"][g_id] = game_obj
                 if item["own"]:
@@ -180,29 +188,14 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 details = await self.client.fetch_thing_details(batch_ids)
 
                 for item in details:
-                    g_id = item["id"]
+                    new_data = self._map_item_to_game(item)
+                    g_id = new_data["bgg_id"]
+
                     existing = data["game_details"].get(g_id, {})
-                    existing.update(
-                        {
-                            "name": item["name"] or existing.get("name"),
-                            "image": item["image"] or existing.get("image"),
-                            "year": item["yearpublished"],
-                            "min_players": item["minplayers"],
-                            "max_players": item["maxplayers"],
-                            "playing_time": item["playingtime"],
-                            "min_playtime": item["minplaytime"],
-                            "max_playtime": item["maxplaytime"],
-                            "rank": item["rank"],
-                            "weight": item["weight"],
-                            "rating": item["rating"],
-                            "bayes_rating": item["bayes_rating"],
-                            "users_rated": item["users_rated"],
-                            "stddev": item["stddev"],
-                            "median": item["median"],
-                            "owned_by": item["owned"],
-                            "sub_type": item["type"],
-                        }
-                    )
+
+                    updates = {k: v for k, v in new_data.items() if v is not None}
+                    existing.update(updates)
+
                     data["game_details"][g_id] = existing
 
             data["last_sync"] = dt_util.now()

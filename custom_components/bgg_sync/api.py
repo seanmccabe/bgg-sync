@@ -8,10 +8,9 @@ from typing import Any
 
 import aiohttp
 
-_LOGGER = logging.getLogger(__name__)
+from .const import BGG_URL, BASE_URL
 
-BGG_URL = "https://boardgamegeek.com"
-XMLAPI2_BASE_URL = f"{BGG_URL}/xmlapi2"
+_LOGGER = logging.getLogger(__name__)
 
 
 class BggClient:
@@ -114,7 +113,7 @@ class BggClient:
 
     async def fetch_plays(self) -> dict[str, Any]:
         """Fetch plays for the user."""
-        url = f"{XMLAPI2_BASE_URL}/plays?username={self.username}"
+        url = f"{BASE_URL}/plays?username={self.username}"
         async with self._session.get(url, headers=self.headers, timeout=10) as resp:
             if resp.status != 200:
                 return {"status": resp.status, "total": 0, "last_play": None}
@@ -149,9 +148,7 @@ class BggClient:
 
     async def fetch_game_plays(self, game_id: int) -> int:
         """Fetch play count for a specific game."""
-        url = (
-            f"{XMLAPI2_BASE_URL}/plays?username={self.username}&id={game_id}&type=thing"
-        )
+        url = f"{BASE_URL}/plays?username={self.username}&id={game_id}&type=thing"
         async with self._session.get(url, headers=self.headers, timeout=10) as resp:
             if resp.status != 200:
                 _LOGGER.warning(
@@ -182,7 +179,9 @@ class BggClient:
 
     async def fetch_collection(self, subtype: str = "boardgame") -> dict[str, Any]:
         """Fetch collection for the user."""
-        url = f"{XMLAPI2_BASE_URL}/collection?username={self.username}&subtype={subtype}&stats=1"
+        url = (
+            f"{BASE_URL}/collection?username={self.username}&subtype={subtype}&stats=1"
+        )
         async with self._session.get(url, headers=self.headers, timeout=60) as resp:
             if resp.status != 200:
                 return {"status": resp.status, "items": []}
@@ -269,7 +268,7 @@ class BggClient:
     async def validate_auth(self) -> int:
         """Validate that the API token/auth works. Returns status code."""
         # We use a simple collection fetch to validate auth
-        url = f"{XMLAPI2_BASE_URL}/collection?username={self.username}&brief=1"
+        url = f"{BASE_URL}/collection?username={self.username}&brief=1"
         async with self._session.get(url, headers=self.headers, timeout=10) as resp:
             return resp.status
 
@@ -279,7 +278,7 @@ class BggClient:
             return []
 
         ids_str = ",".join(map(str, game_ids))
-        url = f"{XMLAPI2_BASE_URL}/thing?id={ids_str}&stats=1"
+        url = f"{BASE_URL}/thing?id={ids_str}&stats=1"
         async with self._session.get(url, headers=self.headers, timeout=30) as resp:
             if resp.status != 200:
                 _LOGGER.error("Thing API failed for batch with status %s", resp.status)
