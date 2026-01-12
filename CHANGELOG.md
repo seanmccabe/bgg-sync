@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0-beta.2] - 2026-01-12
+
+### Changed
+- **Architectural Rewrite:** Created a dedicated, fully asynchronous `BggClient` (in `api.py`) to handle all API logic, ensuring strict separation of concerns.
+- **Service Stability:** The new `BggClient` handles login sessions securely and asynchronously, eliminating the need for blocking executor jobs.
+- **Reliability:** Maintained 100% test coverage and added robust XML parsing helpers to resolve deprecation warnings and parsing errors.
+- **Internal Cleanup:** Refactored `coordinator.py` to use a helper method for game data mapping, strictly enforcing DRY principles and Type Hinting.
+
+
 ## [1.2.0] - 2026-01-11
 
 ### Added
@@ -12,7 +21,7 @@ All notable changes to this project will be documented in this file.
 - **Enhanced Recording Metadata:** Added support for `location`, `incomplete`, and `nowinstats` flags in the `record_play` service.
 
 ### Changed
-- **Asyncio Migration:** Fully migrated network calls to `aiohttp` to prevent thread blocking.
+- **Asyncio Migration:** Fully migrated all network calls to `aiohttp` to prevent thread blocking.
 - **Plays Sensor Attributes:** The `last_play` attribute is now "flattened" into top-level attributes on the Plays sensor:
     - `game`
     - `bgg_id`
@@ -29,7 +38,6 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **Clean Attribute Text**: Fixed issue where BGG BBCode tags (e.g. `[thing=...]`) were appearing in sensor attributes (last play comments).
-- **Service Stability:** Moved blocking legacy recording logic into an executor job to maintain Home Assistant performance standards while ensuring session persistence.
 - **Track Game Service:** Fixed an issue where using the `track_game` service could cause existing sensors to become unavailable if BGG returned a processing status (202).
 
 

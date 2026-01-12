@@ -35,10 +35,13 @@ def mock_bgg_session():
         "custom_components.bgg_sync.coordinator.async_get_clientsession"
     ) as mock_get_session, patch(
         "custom_components.bgg_sync.config_flow.async_get_clientsession"
-    ) as mock_get_session_flow:
+    ) as mock_get_session_flow, patch(
+        "custom_components.bgg_sync.async_get_clientsession"
+    ) as mock_get_session_init:
         mock_session = MagicMock()
         mock_get_session.return_value = mock_session
         mock_get_session_flow.return_value = mock_session
+        mock_get_session_init.return_value = mock_session
         yield mock_session
 
 
