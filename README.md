@@ -22,6 +22,8 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 *   **Direct API Integration**: Uses the BGG XML API2 directly (no third-party library dependencies) for maximum reliability.
 *   **Authentication Support**: Supports BGG's new API Token requirement for data fetching.
 *   **Smart Polling**: Updates every 30 minutes to respect BGG's rate limits and server load.
+*   **Force Sync**: Includes a button entity to manually trigger an immediate update.
+*   **Diagnostics**: Diagnostic sensors (e.g., `last_sync`) to monitor integration health.
 
 ## Installation
 

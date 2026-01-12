@@ -8,8 +8,6 @@
   "documentation": "https://github.com/seanmccabe/bgg-sync",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/seanmccabe/bgg-sync/issues",
-  "requirements": [
-    "requests>=2.0"
-  ],
-  "version": "1.2.0"
+  "requirements": [],
+  "version": "1.3.0-beta.1"
 }
