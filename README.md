@@ -1,6 +1,6 @@
 # <img src="brand_images/icon.png" width="40"/> BoardGameGeek  (BGG Sync)
 
-[![GitHub Release][releases-shield]][releases] [![License][license-shield]](LICENSE) [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration) [![Tests](https://img.shields.io/github/actions/workflow/status/seanmccabe/bgg-sync/tests.yaml?style=for-the-badge)](https://github.com/seanmccabe/bgg-sync/actions/workflows/tests.yaml)
+[![GitHub Release][releases-shield]][releases] [![License][license-shield]](LICENSE) [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://my.home-assistant.io/redirect/hacs_repository/?owner=seanmccabe&repository=bgg-sync&category=integration) [![Tests](https://img.shields.io/github/actions/workflow/status/seanmccabe/bgg-sync/tests.yaml?style=for-the-badge)](https://github.com/seanmccabe/bgg-sync/actions/workflows/tests.yaml)
 
 BoardGameGeek (BGG) integration for Home Assistant. A robust custom component for verifying and tracking plays and collection data. It creates sensors for your play counts and collection, and provides a service to record plays directly from Home Assistant.
 
@@ -27,13 +27,11 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 
 ## Installation
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=seanmccabe&repository=bgg-sync&category=integration)
+
 1.  Ensure you have [HACS](https://hacs.xyz/) installed.
-2.  Add this repository as a [Custom Repository](https://hacs.xyz/docs/faq/custom_repositories) in HACS.
-3.  Search for "BoardGameGeek" (or BGG Sync) and download it.
-4.  Restart Home Assistant.
-
-*Note: Submission to HACS is in the works.*
-
+2.  Search for "BoardGameGeek" (or BGG Sync) in HACS and download it.
+3.  Restart Home Assistant.
 
 ## Configuration
 
