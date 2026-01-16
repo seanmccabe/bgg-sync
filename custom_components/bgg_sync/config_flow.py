@@ -10,7 +10,7 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 
-from .api import BggClient
+from bgg_pi import BggClient
 from .const import (
     DOMAIN,
     CONF_BGG_USERNAME,

@@ -22,7 +22,7 @@ from .const import (
     CONF_ENABLE_LOGGING,
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from .api import BggClient
+from bgg_pi import BggClient
 from .coordinator import BggDataUpdateCoordinator
 
 

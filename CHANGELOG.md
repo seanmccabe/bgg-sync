@@ -9,9 +9,9 @@ All notable changes to this project will be documented in this file.
     - **{Username}:** Contains user stats (plays, collection counts, last sync).
     - **{Username}'s Shelf:** Contains individual game sensors and the shelf To-do list.
 - **New Shelf Controls:** Added a duplicate "Last Sync" sensor and "Force Sync" button specifically to the Shelf device for convenience.
-- **Architectural Rewrite:** Created a dedicated, fully asynchronous `BggClient` (in `api.py`) to handle all API logic, ensuring strict separation of concerns.
-- **Service Stability:** The new `BggClient` handles login sessions securely and asynchronously, eliminating the need for blocking executor jobs.
-- **Reliability:** Maintained 100% test coverage and added robust XML parsing helpers to resolve deprecation warnings and parsing errors.
+- **Architectural Rewrite:** Replaced internal API logic with the newly created, standalone `bgg-pi` Python package (`v0.1.1`). This isolates all BGG API interactions into a dedicated library.
+- **Service Stability:** The integration now leverages `bgg-pi` for all network operations. This client is built from the ground up with `aiohttp` to be fully asynchronous and non-blocking.
+- **Reliability:** By offloading API complexity to an external library with its own 100% test coverage, the integration core is leaner and more robust. `bgg-sync` itself maintains 100% coverage on the integration layer.
 - **Internal Cleanup:** Refactored `coordinator.py` to use a helper method for game data mapping, strictly enforcing DRY principles and Type Hinting.
 
 ## [1.2.1] - 2026-01-16
