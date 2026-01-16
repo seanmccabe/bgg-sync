@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - **Service Stability:** The new `BggClient` handles login sessions securely and asynchronously, eliminating the need for blocking executor jobs.
 - **Reliability:** Maintained 100% test coverage and added robust XML parsing helpers to resolve deprecation warnings and parsing errors.
 - **Internal Cleanup:** Refactored `coordinator.py` to use a helper method for game data mapping, strictly enforcing DRY principles and Type Hinting.
+- **Library Extraction:** Moved all API logic to the external [bgg-pi](https://pypi.org/project/bgg-pi/) package (`v0.1.0`), removing local `api.py` and streamlining the integration.
 
 ## [1.2.1] - 2026-01-16
 

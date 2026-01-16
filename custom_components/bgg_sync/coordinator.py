@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .api import BggClient
+from bgg_pi import BggClient
 
 _LOGGER = logging.getLogger(__name__)
 
