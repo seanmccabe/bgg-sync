@@ -39,6 +39,7 @@ async def test_button_press(hass, mock_coordinator):
     assert button.name == "Force Sync"
     assert button.icon == "mdi:refresh"
     assert button.attribution == "Data provided by BoardGameGeek"
+    assert button.device_info["name"] == "test_user"
 
     await button.async_press()
     mock_coordinator.async_request_refresh.assert_called_once()

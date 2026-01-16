@@ -101,7 +101,7 @@ class BggBaseSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         super().__init__(coordinator)
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.username)},
-            name=f"BGG Sync {coordinator.username}",
+            name=coordinator.username,
             manufacturer="BoardGameGeek",
             configuration_url=f"{BGG_URL}/user/{coordinator.username}",
         )
@@ -223,7 +223,7 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.username)},
-            name=f"BGG Sync {coordinator.username}",
+            name=coordinator.username,
             manufacturer="BoardGameGeek",
             configuration_url=f"{BGG_URL}/user/{coordinator.username}",
         )

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2026-01-16
+
+### Changed
+- **Device Naming:** Updated device name to be just the BGG username (e.g. `seanmccabe`) instead of `BGG Sync {username}` for cleaner integration.
+- **Documentation:** Updated README with HACS installation verification and additional details.
+
 ## [1.2.0] - 2026-01-11
 
 ### Added

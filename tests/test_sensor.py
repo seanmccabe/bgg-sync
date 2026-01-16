@@ -13,12 +13,20 @@ from custom_components.bgg_sync.const import (
     CONF_CUSTOM_IMAGE,
     CONF_IMPORT_COLLECTION,
 )
+import pytest
 
 
-async def test_sensor_setup(hass, mock_coordinator):
+@pytest.fixture
+def mock_coordinator_with_username(mock_coordinator):
+    """Mock coordinator with a set username."""
+    mock_coordinator.username = "test_user"
+    return mock_coordinator
+
+
+async def test_sensor_setup(hass, mock_coordinator_with_username):
     """Test setting up the sensors."""
     # Mock coordinator data
-    mock_coordinator.data = {
+    mock_coordinator_with_username.data = {
         "total_plays": 100,
         "last_play": {"game": "Catan", "date": "2023-01-01", "game_id": 13},
         "total_collection": 50,
@@ -35,15 +43,16 @@ async def test_sensor_setup(hass, mock_coordinator):
     }
 
     # 1. BggPlaysSensor
-    plays_sensor = BggPlaysSensor(mock_coordinator)
+    plays_sensor = BggPlaysSensor(mock_coordinator_with_username)
     assert plays_sensor.state == 100
     assert plays_sensor.extra_state_attributes["game"] == "Catan"
     assert plays_sensor.extra_state_attributes["bgg_id"] == 13
     assert plays_sensor.icon == "mdi:dice-multiple"
     assert plays_sensor.attribution == "Data provided by BoardGameGeek"
+    assert plays_sensor.device_info["name"] == "test_user"
 
     # 1.5 BggLastSyncSensor
-    last_sync_sensor = BggLastSyncSensor(mock_coordinator)
+    last_sync_sensor = BggLastSyncSensor(mock_coordinator_with_username)
     assert last_sync_sensor.native_value is None  # Initially None if not set
     assert last_sync_sensor.icon == "mdi:clock-check-outline"
     assert last_sync_sensor.device_class == "timestamp"
@@ -56,24 +65,29 @@ async def test_sensor_setup(hass, mock_coordinator):
     from datetime import datetime
 
     now = datetime.now()
-    mock_coordinator.data["last_sync"] = now
+    mock_coordinator_with_username.data["last_sync"] = now
     assert last_sync_sensor.native_value == now
 
     # 2. BggCollectionSensor
-    coll_sensor = BggCollectionSensor(mock_coordinator)
+    coll_sensor = BggCollectionSensor(mock_coordinator_with_username)
     assert coll_sensor.state == 50
+    assert coll_sensor.device_info["name"] == "test_user"
 
     # 3. BggCollectionCountSensor (Counts)
     count_sensor = BggCollectionCountSensor(
-        mock_coordinator, "owned_boardgames", "Games Owned", "mdi:checkerboard"
+        mock_coordinator_with_username,
+        "owned_boardgames",
+        "Games Owned",
+        "mdi:checkerboard",
     )
     assert count_sensor.state == 40
     assert count_sensor.name == "Games Owned"
+    assert count_sensor.device_info["name"] == "test_user"
 
     # 4. BggGameSensor
     # Create one with custom metadata
     game_sensor = BggGameSensor(
-        mock_coordinator,
+        mock_coordinator_with_username,
         13,
         {
             CONF_NFC_TAG: "abc",
@@ -82,6 +96,7 @@ async def test_sensor_setup(hass, mock_coordinator):
         },
     )
     assert game_sensor.state == 5
+    assert game_sensor.device_info["name"] == "test_user"
     assert game_sensor.extra_state_attributes["bgg_id"] == "13"
     assert game_sensor.extra_state_attributes[CONF_NFC_TAG] == "abc"
     assert game_sensor.extra_state_attributes[CONF_MUSIC] == "uri"
@@ -91,12 +106,12 @@ async def test_sensor_setup(hass, mock_coordinator):
     assert game_sensor.icon is None
 
     # Test BggGameSensor fallback image
-    game_sensor_no_custom = BggGameSensor(mock_coordinator, 13, {})
+    game_sensor_no_custom = BggGameSensor(mock_coordinator_with_username, 13, {})
     assert game_sensor_no_custom.entity_picture == "http://image.com"
 
     # Test BggGameSensor no image at all -> use icon
-    mock_coordinator.data["game_details"][13]["image"] = None
-    game_sensor_no_img = BggGameSensor(mock_coordinator, 13, {})
+    mock_coordinator_with_username.data["game_details"][13]["image"] = None
+    game_sensor_no_img = BggGameSensor(mock_coordinator_with_username, 13, {})
     assert game_sensor_no_img.entity_picture is None
     assert game_sensor_no_img.icon == "mdi:dice-multiple"
 
