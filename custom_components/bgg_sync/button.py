@@ -37,7 +37,7 @@ class BggForceSyncButton(CoordinatorEntity[BggDataUpdateCoordinator], ButtonEnti
         self._attr_icon = "mdi:refresh"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.username)},
-            name=f"BGG Sync {coordinator.username}",
+            name=coordinator.username,
             manufacturer="BoardGameGeek",
             configuration_url=f"{BGG_URL}/user/{coordinator.username}",
         )

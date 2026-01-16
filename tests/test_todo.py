@@ -61,6 +61,7 @@ async def test_todo_creation(hass, mock_coordinator):
     assert args[0].name == "Shelf"
     assert args[0].unique_id == "test_user_shelf"
     assert args[0].attribution == "Data provided by BoardGameGeek"
+    assert args[0].device_info["name"] == "test_user"
 
 
 async def test_todo_creation_disabled(hass, mock_coordinator):

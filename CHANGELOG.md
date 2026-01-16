@@ -10,6 +10,11 @@ All notable changes to this project will be documented in this file.
 - **Reliability:** Maintained 100% test coverage and added robust XML parsing helpers to resolve deprecation warnings and parsing errors.
 - **Internal Cleanup:** Refactored `coordinator.py` to use a helper method for game data mapping, strictly enforcing DRY principles and Type Hinting.
 
+## [1.2.1] - 2026-01-16
+
+### Changed
+- **Device Naming:** Updated device name to be just the BGG username (e.g. `seanmccabe`) instead of `BGG Sync {username}` for cleaner integration.
+- **Documentation:** Updated README with HACS installation verification and additional details.
 
 ## [1.2.0] - 2026-01-11
 
