@@ -19,7 +19,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up BGG Sync buttons."""
     coordinator: BggDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([BggForceSyncButton(coordinator)])
+    async_add_entities(
+        [BggForceSyncButton(coordinator), BggShelfForceSyncButton(coordinator)]
+    )
 
 
 class BggForceSyncButton(CoordinatorEntity[BggDataUpdateCoordinator], ButtonEntity):
@@ -45,3 +47,20 @@ class BggForceSyncButton(CoordinatorEntity[BggDataUpdateCoordinator], ButtonEnti
     async def async_press(self) -> None:
         """Press the button."""
         await self.coordinator.async_request_refresh()
+
+
+class BggShelfForceSyncButton(BggForceSyncButton):
+    """Button to force a BGG sync (Shelf Device)."""
+
+    def __init__(self, coordinator: BggDataUpdateCoordinator) -> None:
+        """Initialize the button."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.username}_shelf_force_sync"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{coordinator.username}_shelf")},
+            name=f"{coordinator.username}'s Shelf",
+            manufacturer="BoardGameGeek",
+            model="Board Game Collection",
+            configuration_url=f"{BGG_URL}/collection/user/{coordinator.username}",
+            via_device=(DOMAIN, coordinator.username),
+        )

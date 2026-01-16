@@ -15,6 +15,7 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 
 *   **Game Tracking**: Option to track specific games (by ID) to get dedicated sensors with rich metadata (Box Art, Rank, Year, weight and more)!
 *   **Shelf Tracker**: View your full collection as a Home Assistant To-do List.
+*   **Device Handling**: Automatically organises entities into two devices: "**{Username}**" for stats/counts and "**{Username}'s Shelf**" for the physical game collection and lists.
 *   **Play Logging**: Includes an action to log plays to your BGG account.
 *   **Multi-User**: Supports tracking multiple BGG accounts.
 *   **Wishlist Monitoring**: Dedicated sensors to track the size of your collection, Owned, Want-to-own, Wishlist and more!
@@ -74,7 +75,9 @@ The integration creates the following sensors:
 *   `sensor.bgg_sync_{username}_{list_type}`: Counts for various lists:
     *   `owned_boardgames`, `owned_expansions`
     *   `wishlist`, `want_to_play`, `want_to_buy`, `for_trade`, `preordered`
-*   `sensor.{game_name}` (optional): A rich sensor for a specific tracked game.
+    *   `wishlist`, `want_to_play`, `want_to_buy`, `for_trade`, `preordered`
+*   **Shelf Device** (`{Username}'s Shelf`):
+    *   `sensor.{game_name}`: A rich sensor for each tracked game.
     *   **State**: Total Plays.
     *   **Entity Picture**: The authentic game box art from BGG (or your custom override).
     *   **Attributes**:

@@ -40,10 +40,12 @@ class BggCollectionTodoList(
         self._attr_unique_id = f"{coordinator.username}_shelf"
         self._attr_name = "Shelf"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.username)},
-            name=coordinator.username,
+            identifiers={(DOMAIN, f"{coordinator.username}_shelf")},
+            name=f"{coordinator.username}'s Shelf",
             manufacturer="BoardGameGeek",
-            configuration_url=f"{BGG_URL}/user/{coordinator.username}",
+            model="Board Game Collection",
+            configuration_url=f"{BGG_URL}/collection/user/{coordinator.username}",
+            via_device=(DOMAIN, coordinator.username),
         )
 
     @property

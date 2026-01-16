@@ -57,6 +57,7 @@ async def async_setup_entry(
             coordinator, "preordered", "Preordered", "mdi:clock-outline"
         ),
         BggLastSyncSensor(coordinator),
+        BggShelfLastSyncSensor(coordinator),
     ]
 
     # Parse game data from options
@@ -203,6 +204,23 @@ class BggLastSyncSensor(BggBaseSensor):
         return self.coordinator.data.get("last_sync")
 
 
+class BggShelfLastSyncSensor(BggLastSyncSensor):
+    """Diagnostic sensor for last successful BGG sync (Shelf Device)."""
+
+    def __init__(self, coordinator: BggDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.username}_shelf_last_sync"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{coordinator.username}_shelf")},
+            name=f"{coordinator.username}'s Shelf",
+            manufacturer="BoardGameGeek",
+            model="Board Game Collection",
+            configuration_url=f"{BGG_URL}/collection/user/{coordinator.username}",
+            via_device=(DOMAIN, coordinator.username),
+        )
+
+
 class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
     """Sensor for a specific game with rich metadata."""
 
@@ -222,10 +240,12 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         self._attr_name = name or f"BGG Game {game_id}"
 
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.username)},
-            name=coordinator.username,
+            identifiers={(DOMAIN, f"{coordinator.username}_shelf")},
+            name=f"{coordinator.username}'s Shelf",
             manufacturer="BoardGameGeek",
-            configuration_url=f"{BGG_URL}/user/{coordinator.username}",
+            model="Board Game Collection",
+            configuration_url=f"{BGG_URL}/collection/user/{coordinator.username}",
+            via_device=(DOMAIN, coordinator.username),
         )
 
     @property

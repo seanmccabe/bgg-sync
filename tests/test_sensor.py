@@ -6,6 +6,7 @@ from custom_components.bgg_sync.sensor import (
     BggGameSensor,
     BggCollectionCountSensor,
     BggLastSyncSensor,
+    BggShelfLastSyncSensor,
 )
 from custom_components.bgg_sync.const import (
     CONF_NFC_TAG,
@@ -68,6 +69,12 @@ async def test_sensor_setup(hass, mock_coordinator_with_username):
     mock_coordinator_with_username.data["last_sync"] = now
     assert last_sync_sensor.native_value == now
 
+    # 1.6 BggShelfLastSyncSensor
+    shelf_last_sync = BggShelfLastSyncSensor(mock_coordinator_with_username)
+    assert shelf_last_sync.unique_id == "test_user_shelf_last_sync"
+    assert shelf_last_sync.device_info["name"] == "test_user's Shelf"
+    assert shelf_last_sync.native_value == now
+
     # 2. BggCollectionSensor
     coll_sensor = BggCollectionSensor(mock_coordinator_with_username)
     assert coll_sensor.state == 50
@@ -96,7 +103,7 @@ async def test_sensor_setup(hass, mock_coordinator_with_username):
         },
     )
     assert game_sensor.state == 5
-    assert game_sensor.device_info["name"] == "test_user"
+    assert game_sensor.device_info["name"] == "test_user's Shelf"
     assert game_sensor.extra_state_attributes["bgg_id"] == "13"
     assert game_sensor.extra_state_attributes[CONF_NFC_TAG] == "abc"
     assert game_sensor.extra_state_attributes[CONF_MUSIC] == "uri"

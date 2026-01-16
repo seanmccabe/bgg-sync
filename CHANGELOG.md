@@ -2,9 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.0-beta.2] - 2026-01-12
+## [1.3.0-beta.3] - 2026-01-12
 
 ### Changed
+- **Device Separation:** Split entities into two separate devices:
+    - **{Username}:** Contains user stats (plays, collection counts, last sync).
+    - **{Username}'s Shelf:** Contains individual game sensors and the shelf To-do list.
+- **New Shelf Controls:** Added a duplicate "Last Sync" sensor and "Force Sync" button specifically to the Shelf device for convenience.
 - **Architectural Rewrite:** Created a dedicated, fully asynchronous `BggClient` (in `api.py`) to handle all API logic, ensuring strict separation of concerns.
 - **Service Stability:** The new `BggClient` handles login sessions securely and asynchronously, eliminating the need for blocking executor jobs.
 - **Reliability:** Maintained 100% test coverage and added robust XML parsing helpers to resolve deprecation warnings and parsing errors.
