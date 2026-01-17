@@ -289,8 +289,9 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                         game_obj = {
                             "bgg_id": g_id,
                             "name": item.findtext("name"),
-                            "image": item.findtext("image"),
-                            "thumbnail": item.findtext("thumbnail"),
+                            "image": (item.findtext("image") or "").strip() or None,
+                            "thumbnail": (item.findtext("thumbnail") or "").strip()
+                            or None,
                             "year": item.findtext("yearpublished"),
                             "numplays": item.findtext("numplays", "0"),
                             "subtype": item.get("subtype"),
@@ -450,7 +451,8 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                                 existing.update(
                                     {
                                         "name": name,
-                                        "image": item.findtext("image"),
+                                        "image": (item.findtext("image") or "").strip()
+                                        or None,
                                         "year": item.find("yearpublished").get("value")
                                         if item.find("yearpublished") is not None
                                         else None,

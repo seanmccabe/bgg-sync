@@ -539,3 +539,36 @@ Played with expansions:
 -PARKS: Wildlife"""
 
     assert coordinator._clean_bgg_text(raw_comment) == expected
+
+
+async def test_coordinator_image_whitespace_handling(
+    hass, mock_response, mock_bgg_session
+):
+    """Test that image URLs are stripped of whitespace."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [777])
+
+    xml_with_space = b"""
+    <items>
+        <item id="777" type="boardgame">
+            <name type="primary" value="Test Space" />
+            <image>
+                http://example.com/image.png
+            </image>
+        </item>
+    </items>
+    """
+
+    def side_effect(url, **kwargs):
+        if "thing" in url:
+            return mock_response(xml_with_space)
+        if "plays" in url:
+            return mock_response(b"<plays></plays>")
+        if "collection" in url:
+            return mock_response(b"<items></items>")
+        return mock_response(b"<items></items>")
+
+    mock_bgg_session.get.side_effect = side_effect
+
+    data = await coordinator._async_update_data()
+
+    assert data["game_details"][777]["image"] == "http://example.com/image.png"
