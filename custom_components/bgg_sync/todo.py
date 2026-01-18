@@ -38,7 +38,7 @@ class BggCollectionTodoList(
         """Initialise the todo list."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.username}_shelf"
-        self._attr_name = "Shelf"
+        self._attr_name = None
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.username)},
             name=coordinator.username,

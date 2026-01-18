@@ -53,7 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     all_game_ids = list(set(game_ids_from_csv + [int(k) for k in game_data.keys()]))
 
     coordinator = BggDataUpdateCoordinator(
-        hass, username, password, api_token, all_game_ids
+        hass, username, password, api_token, all_game_ids, game_data
     )
     await coordinator.async_config_entry_first_refresh()
 

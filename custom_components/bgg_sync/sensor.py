@@ -251,11 +251,8 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
             return cust
 
         # 2. BGG Image
-        return (
-            self.coordinator.data.get("game_details", {})
-            .get(self.game_id, {})
-            .get("image")
-        )
+        details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
+        return details.get("image") or details.get("thumbnail")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

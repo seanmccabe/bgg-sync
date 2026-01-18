@@ -8,7 +8,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import BASE_URL, BGG_URL
+from .const import BASE_URL, BGG_URL, IMAGE_CACHE_DIR, CONF_CUSTOM_IMAGE
+import os
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         password: str | None,
         api_token: str | None,
         game_ids: list[int],
+        game_data: dict | None = None,
     ) -> None:
         """Initialize."""
         super().__init__(
@@ -35,6 +37,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         self.password = password
         self.api_token = api_token
         self.game_ids = game_ids
+        self.game_data = game_data or {}
         self.logged_in = False
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
@@ -121,6 +124,108 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 self.logged_in = True
         except Exception as err:
             _LOGGER.error("Login failed for %s: %s", self.username, err)
+
+    async def _download_image(self, url: str, game_id: int) -> str | None:
+        """Download image and save locally, returning local path."""
+        if not url:
+            return None
+
+        # Determine file path
+        try:
+            # Create www/bgg_images dir if not exists
+            # Note: We must ensure we are writing to a path that HA can serve
+            # In HA, hass.config.path("www") maps to /local/
+            www_dir = self.hass.config.path("www")
+            cache_dir = os.path.join(www_dir, IMAGE_CACHE_DIR)
+
+            # Ensure directory exists (sync op, but fast/rare)
+            if not os.path.exists(cache_dir):
+                await self.hass.async_add_executor_job(os.makedirs, cache_dir)
+
+            # Parse extension
+            ext = "jpg"
+            if ".png" in url.lower():
+                ext = "png"
+            elif ".webp" in url.lower():
+                ext = "webp"
+
+            filename = f"{game_id}.{ext}"
+            file_path = os.path.join(cache_dir, filename)
+            meta_path = f"{file_path}.url"
+
+            # Check if we have a valid cache
+            cached_url = None
+            if os.path.exists(meta_path) and os.path.exists(file_path):
+
+                def read_meta():
+                    with open(meta_path) as f:
+                        return f.read().strip()
+
+                try:
+                    cached_url = await self.hass.async_add_executor_job(read_meta)
+                except Exception:
+                    pass
+
+            # If file exists and URL matches, return local path
+            if cached_url == url:
+                return f"/local/{IMAGE_CACHE_DIR}/{filename}"
+
+            # Download
+            session = async_get_clientsession(self.hass)
+            async with session.get(url, timeout=15) as resp:
+                if resp.status == 200:
+                    data = await resp.read()
+
+                    # Write file and metadata in executor
+                    def write_file():
+                        with open(file_path, "wb") as f:
+                            f.write(data)
+                        with open(meta_path, "w") as f:
+                            f.write(url)
+
+                    await self.hass.async_add_executor_job(write_file)
+                    _LOGGER.debug("Downloaded image for game %s", game_id)
+                    return f"/local/{IMAGE_CACHE_DIR}/{filename}"
+                else:
+                    _LOGGER.warning(
+                        "Failed to download image for %s: %s", game_id, resp.status
+                    )
+                    return None
+
+        except Exception as e:
+            _LOGGER.warning(f"Error caching image for {game_id}: {e}")
+            return None
+
+    async def _cache_images(self, data: dict):
+        """Download images for all games in details."""
+        details = data.get("game_details", {})
+
+        # We limit concurrency to avoid blocking too much
+        # But for now, let's just do it sequentially or simple gather if list isn't huge?
+        # A simple sequential check is safer for start
+
+        for g_id, info in details.items():
+            # Determine source URL: Custom overrides BGG
+            custom_img = self.game_data.get(str(g_id), {}).get(CONF_CUSTOM_IMAGE)
+            if not custom_img:
+                # Fallback to legacy int keys if not found (just in case)
+                custom_img = self.game_data.get(g_id, {}).get(CONF_CUSTOM_IMAGE)
+
+            img_url = custom_img or info.get("image")
+
+            if img_url and not img_url.startswith("/local/"):
+                # Check if we already have it in a previous run?
+                # We re-check file existence in _download_image so it's idempotent
+                local_path = await self._download_image(img_url, g_id)
+                if local_path:
+                    # Update the data dict to point to local
+                    data["game_details"][g_id]["original_image"] = img_url
+                    data["game_details"][g_id]["image"] = local_path
+                    # Also update thumbnail fallback?
+                    data["game_details"][g_id]["thumbnail"] = local_path
+
+        return
+        return
 
     async def _async_update_data(self):
         """Fetch data from BGG."""
@@ -501,6 +606,9 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                                 )
                     except Exception as e:
                         _LOGGER.error("Failed to parse BGG XML response: %s", e)
+
+            # 5. Cache Images Locally
+            await self._cache_images(data)
 
             data["last_sync"] = dt_util.now()
             return data

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-01-18
+
+### Added
+- **Local Image Caching:** Game images (and custom overrides) are now downloaded and cached locally in `/config/www/bgg_images/`. This significantly improves image loading reliability and speed in the Home Assistant dashboard.
+- **Improved Custom Image Support:** Setting a `custom_image` for a game now handles the download and caching process automatically, ensuring your custom art is always displayed correctly even if the original URL is external.
+
+### Fixed
+- **Image Loading:** Fixed an issue where game box art images would fail to load in Home Assistant because of whitespace characters in the URLs returned by the BoardGameGeek API.
+- **Todo List Name:** Removed duplicate "Shelf" from the Todo list entity name (e.g., prevented "User's Shelf Shelf").
+
 ## [1.2.1] - 2026-01-16
 
 ### Changed
