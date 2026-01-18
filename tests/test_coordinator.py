@@ -574,6 +574,8 @@ async def test_coordinator_image_whitespace_handling(
         unittest.mock.patch("os.makedirs"),
         unittest.mock.patch("os.path.exists", return_value=False),
         unittest.mock.patch("builtins.open", unittest.mock.mock_open()),
+        unittest.mock.patch("PIL.Image.open"),
+        unittest.mock.patch("io.BytesIO"),
     ):
         data = await coordinator._async_update_data()
 

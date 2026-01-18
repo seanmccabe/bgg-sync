@@ -10,6 +10,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import BASE_URL, BGG_URL, IMAGE_CACHE_DIR, CONF_CUSTOM_IMAGE
 import os
+from PIL import Image
+import io
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -178,8 +180,21 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
                     # Write file and metadata in executor
                     def write_file():
-                        with open(file_path, "wb") as f:
-                            f.write(data)
+                        # Optimize image size
+                        try:
+                            with Image.open(io.BytesIO(data)) as img:
+                                # Convert to RGB if necessary (e.g. PNG with transparency to JPG)
+                                # But we want to keep transparency if PNG.
+                                # Just resize.
+                                img.thumbnail((500, 500))
+                                img.save(file_path, optimize=True, quality=85)
+                        except Exception as e:
+                            _LOGGER.warning(
+                                f"Error resizing image {game_id}, saving original: {e}"
+                            )
+                            with open(file_path, "wb") as f:
+                                f.write(data)
+
                         with open(meta_path, "w") as f:
                             f.write(url)
 

@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - **Local Image Caching:** Game images (and custom overrides) are now downloaded and cached locally in `/config/www/bgg_images/`. This significantly improves image loading reliability and speed in the Home Assistant dashboard.
+- **Image Optimization:** Cached images are now automatically resized to a maximum of 500x500 pixels. This drastically reduces memory usage and dashboard load times, preventing crashes when displaying large collections.
 - **Improved Custom Image Support:** Setting a `custom_image` for a game now handles the download and caching process automatically, ensuring your custom art is always displayed correctly even if the original URL is external.
 
 ### Fixed
