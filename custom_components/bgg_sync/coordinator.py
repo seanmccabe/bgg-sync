@@ -39,7 +39,14 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
         self.password = password
         self.api_token = api_token
         self.game_ids = game_ids
-        self.game_data = game_data or {}
+        # Normalize game_data keys to ints
+        self.game_data = {}
+        if game_data:
+            for k, v in game_data.items():
+                try:
+                    self.game_data[int(k)] = v
+                except ValueError:
+                    continue
         self.logged_in = False
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
@@ -221,10 +228,8 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
         for g_id, info in details.items():
             # Determine source URL: Custom overrides BGG
-            custom_img = self.game_data.get(str(g_id), {}).get(CONF_CUSTOM_IMAGE)
-            if not custom_img:
-                # Fallback to legacy int keys if not found (just in case)
-                custom_img = self.game_data.get(g_id, {}).get(CONF_CUSTOM_IMAGE)
+            # game_data keys are normalized to int in init
+            custom_img = self.game_data.get(g_id, {}).get(CONF_CUSTOM_IMAGE)
 
             img_url = custom_img or info.get("image")
 

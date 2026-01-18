@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - **Image Loading:** Fixed an issue where game box art images would fail to load in Home Assistant because of whitespace characters in the URLs returned by the BoardGameGeek API.
 - **Todo List Name:** Removed duplicate "Shelf" from the Todo list entity name (e.g., prevented "User's Shelf Shelf").
+- **Sensor Availability:** Fixed a critical bug where sensors for games tracked via service calls (but not in the BGG collection) would become "Unavailable" after a configuration update or restart.
+- **Attribute Persistence:** Fixed an issue where custom attributes (NFC tags, Music links, Custom Images) for tracked games were lost upon integration reload.
+
+### Changed
+- **Australian Localisation:** Updated the `record_play` service to accept `colour` in addition to `color` for player details, allowing for correct Australian/British spelling.
 
 ## [1.2.1] - 2026-01-16
 
