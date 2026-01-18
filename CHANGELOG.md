@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - **Local Image Caching:** Game images (and custom overrides) are now downloaded and cached locally in `/config/www/bgg_images/`. This significantly improves image loading reliability and speed in the Home Assistant dashboard.
-- **Image Optimization:** Cached images are now automatically resized to a maximum of 500x500 pixels. This drastically reduces memory usage and dashboard load times, preventing crashes when displaying large collections.
+- **Image Optimisation:** Cached images are now automatically resized to a maximum of 500x500 pixels. This drastically reduces memory usage and dashboard load times, preventing crashes when displaying large collections.
 - **Improved Custom Image Support:** Setting a `custom_image` for a game now handles the download and caching process automatically, ensuring your custom art is always displayed correctly even if the original URL is external.
 
 ### Fixed
@@ -24,8 +24,8 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **Force Sync Button:** Added a button entity to manually trigger a synchronisation with BoardGameGeek.
 - **Last Sync Sensor:** Added a diagnostic sensor (`bgg_last_sync`) to track the timestamp of the last successful data fetch.
-- **String Localization:** Added friendly localised names for the services.
-- **Player Details in Recording:** The `record_play` service now supports passing player names, winners, scores, positions, colors, and ratings to BoardGameGeek.
+- **String Localisation:** Added friendly localised names for the services.
+- **Player Details in Recording:** The `record_play` service now supports passing player names, winners, scores, positions, colours, and ratings to BoardGameGeek.
 - **Enhanced Recording Metadata:** Added support for `location`, `incomplete`, and `nowinstats` flags in the `record_play` service.
 
 ### Changed

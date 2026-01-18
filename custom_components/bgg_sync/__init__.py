@@ -225,7 +225,7 @@ def record_play_on_bgg(
                     "win": bool(p.get("winner")),
                     "score": str(p.get("score", "")),
                     "position": str(p.get("position", "")),
-                    "color": str(p.get("color", "")),
+                    "color": str(p.get("colour", p.get("color", ""))),
                     "rating": int(p.get("rating", 0)) if p.get("rating") else 0,
                     "new": True,
                     "selected": True,
