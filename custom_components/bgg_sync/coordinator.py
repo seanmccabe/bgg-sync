@@ -182,7 +182,8 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Download
             session = async_get_clientsession(self.hass)
-            async with session.get(url, timeout=15) as resp:
+            headers = {"User-Agent": self.headers["User-Agent"]}
+            async with session.get(url, headers=headers, timeout=15) as resp:
                 if resp.status == 200:
                     data = await resp.read()
 
