@@ -6,6 +6,8 @@ import pytest
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from custom_components.bgg_sync.coordinator import BggDataUpdateCoordinator
 from aiohttp import ClientError
+from unittest.mock import MagicMock, patch, mock_open
+from custom_components.bgg_sync.const import IMAGE_CACHE_DIR
 
 
 async def test_coordinator_data_update(
@@ -595,12 +597,6 @@ async def test_coordinator_image_whitespace_handling(
     assert "http://example.com/image.png" in str(data["game_details"][777])
 
 
-from unittest.mock import MagicMock, patch, mock_open
-import pytest
-from custom_components.bgg_sync.coordinator import BggDataUpdateCoordinator
-from custom_components.bgg_sync.const import IMAGE_CACHE_DIR
-
-
 @pytest.fixture
 def mock_coordinator(hass):
     """Create a mock coordinator."""
@@ -718,7 +714,6 @@ async def test_read_meta_exception(hass, mock_coordinator):
         # We intercept executor job.
         # If the job function name is 'read_meta', we raise.
         # If 'write_file', we let it pass.
-        original_add_job = hass.async_add_executor_job
 
         async def side_effect(target, *args):
             if target.__name__ == "read_meta":
@@ -755,3 +750,125 @@ def test_coordinator_init_game_data_normalization(hass):
     assert 456 in coord.game_data
     assert "invalid" not in coord.game_data
     assert coord.game_data[123] == {"prop": "val"}
+
+
+async def test_coordinator_thing_batch_retry_success(
+    hass, caplog, mock_response, mock_bgg_session
+):
+    """Test that we retry on 429 and succeed eventually."""
+    coordinator = BggDataUpdateCoordinator(
+        hass, "test_user", None, None, list(range(1, 21))
+    )
+
+    # We need to simulate:
+    # 1. Plays API success
+    # 2. Collection API success (empty)
+    # 3. Thing API: 429, then 429, then 200 OK
+
+    # side_effect can be an iterable, but it's per-call.
+    # The coordinator calls:
+    # 1. plays
+    # 2. collection (boardgame)
+    # 3. Collection (expansion) API success (empty)
+    # 4. Specific plays API success (empty)
+    # 5. Thing API: 429 x 2 -> 200
+
+    def make_resp(content=b"", status=200):
+        m = AsyncMock()
+        m.status = status
+        m.text.return_value = content
+        m.__aenter__.return_value = m
+        return m
+
+    thing_attempts = 0
+
+    def side_effect(url, **kwargs):
+        nonlocal thing_attempts
+        if "plays" in url:
+            return make_resp(b"<plays></plays>")
+        if "collection" in url:
+            return make_resp(b"<items></items>")
+        if "thing" in url:
+            thing_attempts += 1
+            if thing_attempts < 3:
+                return make_resp(status=429)
+            return make_resp(
+                b"<items><item id='1'><name type='primary' value='G'/></item></items>"
+            )
+        return make_resp(status=404)
+
+    mock_bgg_session.get.side_effect = side_effect
+
+    # We patch asyncio.sleep to speed up test
+    with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        data = await coordinator._async_update_data()
+
+    assert thing_attempts == 3
+    # Check that we logged the retries
+    assert "Rate limited (429) for batch 0. Retrying" in caplog.text
+    # Verify we got data
+    assert data["game_details"][1]["name"] == "G"
+    assert mock_sleep.call_count >= 2
+
+
+async def test_coordinator_thing_batch_retry_giveup(
+    hass, caplog, mock_response, mock_bgg_session
+):
+    """Test that we give up after max retries."""
+    coordinator = BggDataUpdateCoordinator(
+        hass, "test_user", None, None, list(range(1, 21))
+    )
+
+    def make_resp(content=b"", status=200):
+        m = AsyncMock()
+        m.status = status
+        m.text.return_value = content
+        m.__aenter__.return_value = m
+        return m
+
+    def side_effect(url, **kwargs):
+        if "plays" in url:
+            return make_resp(b"<plays></plays>")
+        if "collection" in url:
+            return make_resp(b"<items></items>")
+        if "thing" in url:
+            return make_resp(status=429)
+        return make_resp(status=404)
+
+    mock_bgg_session.get.side_effect = side_effect
+
+    with patch("asyncio.sleep", new_callable=AsyncMock) as _:
+        with caplog.at_level(logging.WARNING):
+            coordinator.data = await coordinator._async_update_data()
+
+    assert caplog.text.count("Rate limited (429)") == 5
+    # Should have empty data for that batch
+    assert 1 not in coordinator.data["game_details"]
+
+
+async def test_coordinator_thing_batch_network_error(
+    hass, caplog, mock_response, mock_bgg_session
+):
+    """Test that we handle network errors during thing batch requests."""
+    coordinator = BggDataUpdateCoordinator(
+        hass, "test_user", None, None, list(range(1, 21))
+    )
+
+    def side_effect(url, **kwargs):
+        if "plays" in url:
+            return mock_response(b"<plays></plays>")
+        if "collection" in url:
+            return mock_response(b"<items></items>")
+        if "thing" in url:
+            raise ClientError("Network Error")
+        return mock_response(status=404)
+
+    mock_bgg_session.get.side_effect = side_effect
+
+    with patch("asyncio.sleep", new_callable=AsyncMock) as _:
+        with caplog.at_level(logging.WARNING):
+            coordinator.data = await coordinator._async_update_data()
+
+    assert "Network error processing batch" in caplog.text
+    # Should have empty data for that batch
+    assert 1 not in coordinator.data["game_details"]

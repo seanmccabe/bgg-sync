@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - **Improved Custom Image Support:** Setting a `custom_image` for a game now handles the download and caching process automatically, ensuring your custom art is always displayed correctly even if the original URL is external.
 
 ### Fixed
+- **API Stability:** Implemented intelligent rate limiting and automatic retries for BoardGameGeek API requests. This resolves `429 Too Many Requests` errors that could occur when syncing large collections, ensuring data updates are much more reliable.
 - **Image Loading:** Fixed an issue where game box art images would fail to load in Home Assistant because of whitespace characters in the URLs returned by the BoardGameGeek API.
 - **Todo List Name:** Removed duplicate "Shelf" from the Todo list entity name (e.g., prevented "User's Shelf Shelf").
 - **Sensor Availability:** Fixed a critical bug where sensors for games tracked via service calls (but not in the BGG collection) would become "Unavailable" after a configuration update or restart.

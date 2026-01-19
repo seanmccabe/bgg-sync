@@ -1,5 +1,6 @@
 import logging
 import re
+import asyncio
 import xml.etree.ElementTree as ET
 from datetime import timedelta
 
@@ -520,19 +521,38 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 thing_url = f"{BASE_URL}/thing?id={ids_str}&stats=1"
                 _LOGGER.debug("Requesting batch %d: %s", i, thing_url)
 
-                async with session.get(
-                    thing_url, headers=self.headers, timeout=30
-                ) as resp:
-                    if resp.status != 200:
-                        _LOGGER.warning(
-                            "Thing API failed for batch starting at index %s. Status: %s",
-                            i,
-                            resp.status,
-                        )
-                        continue
+                text = None
+                for attempt in range(5):
+                    try:
+                        async with session.get(
+                            thing_url, headers=self.headers, timeout=30
+                        ) as resp:
+                            if resp.status == 200:
+                                text = await resp.text()
+                                break
+                            elif resp.status == 429:
+                                wait_seconds = 2 * (2**attempt)
+                                _LOGGER.warning(
+                                    "Rate limited (429) for batch %d. Retrying in %ds...",
+                                    i,
+                                    wait_seconds,
+                                )
+                                await asyncio.sleep(wait_seconds)
+                            else:
+                                _LOGGER.warning(
+                                    "Thing API failed for batch starting at index %s. Status: %s",
+                                    i,
+                                    resp.status,
+                                )
+                                break
+                    except Exception as err:
+                        _LOGGER.warning("Network error processing batch %s: %s", i, err)
+                        await asyncio.sleep(1)
 
-                    # If status is 200, parse content
-                    text = await resp.text()
+                # Rate limiting delay between batches (even successful ones)
+                await asyncio.sleep(2)
+
+                if text:
                     try:
                         root = await self.hass.async_add_executor_job(
                             ET.fromstring, text

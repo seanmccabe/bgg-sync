@@ -117,6 +117,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         async def async_track_game(call):
             """Add a game to be tracked."""
+            _LOGGER.info("Service 'track_game' called with data: %s", call.data)
             bgg_id = call.data["bgg_id"]
             nfc = call.data.get("nfc_tag")
             music = call.data.get("music")
@@ -138,6 +139,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 _LOGGER.error("No BGG Sync configuration found to track game.")
                 return
 
+            _LOGGER.info(
+                "Found config entry for user: %s", entry.data.get(CONF_BGG_USERNAME)
+            )
+
             new_options = dict(entry.options)
             current_data = new_options.get(CONF_GAME_DATA, {}).copy()
 
@@ -152,6 +157,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             current_data[str(bgg_id)] = metadata
             new_options[CONF_GAME_DATA] = current_data
 
+            _LOGGER.info("Updating entry options to track game %s", bgg_id)
             hass.config_entries.async_update_entry(entry, options=new_options)
 
         hass.services.async_register(DOMAIN, SERVICE_TRACK_GAME, async_track_game)
