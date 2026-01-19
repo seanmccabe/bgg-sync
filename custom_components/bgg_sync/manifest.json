@@ -9,7 +9,8 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/seanmccabe/bgg-sync/issues",
   "requirements": [
-    "requests>=2.0"
+    "requests>=2.0",
+    "Pillow>=10.0.0"
   ],
-  "version": "1.2.1"
+  "version": "1.2.2-beta.6"
 }

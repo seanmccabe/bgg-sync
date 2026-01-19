@@ -25,6 +25,7 @@ CONF_NFC_TAG = "nfc_tag"
 CONF_MUSIC = "music"
 CONF_CUSTOM_IMAGE = "custom_image"
 CONF_GAME_DATA = "game_data"  # To store the rich metadata dict
+IMAGE_CACHE_DIR = "bgg_images"
 
 ATTR_GAME_RANK = "rank"
 ATTR_GAME_YEAR = "year"

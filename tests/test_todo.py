@@ -58,7 +58,7 @@ async def test_todo_creation(hass, mock_coordinator):
 
     assert len(args) == 1
     assert isinstance(args[0], BggCollectionTodoList)
-    assert args[0].name == "Shelf"
+    assert args[0].name is None
     assert args[0].unique_id == "test_user_shelf"
     assert args[0].attribution == "Data provided by BoardGameGeek"
     assert args[0].device_info["name"] == "test_user"
