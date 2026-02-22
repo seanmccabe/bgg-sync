@@ -142,8 +142,13 @@ async def test_sensor_legacy_csv_format(hass, mock_coordinator):
     from custom_components.bgg_sync.const import CONF_GAMES, DOMAIN
 
     entry = MagicMock()
-    entry.options = {CONF_GAMES: "123, 456"}
+    game_ids = [123, 456]
+    entry.options = {CONF_GAMES: ", ".join(map(str, game_ids))}
     entry.entry_id = "test"
+
+    # Coordinator must now have these IDs mocked (as if init parsed them)
+    mock_coordinator.game_ids = game_ids
+    mock_coordinator.game_data = {}
 
     mock_coordinator.data = {
         "game_details": {
@@ -164,25 +169,6 @@ async def test_sensor_legacy_csv_format(hass, mock_coordinator):
     ids = [s.game_id for s in game_sensors]
     assert 123 in ids
     assert 456 in ids
-
-
-async def test_sensor_game_creation_error(hass, caplog, mock_coordinator):
-    """Test generic exception during sensor creation logic."""
-    from custom_components.bgg_sync.sensor import async_setup_entry
-    from custom_components.bgg_sync.const import CONF_GAME_DATA, DOMAIN
-    import logging
-
-    entry = MagicMock()
-    entry.options = {CONF_GAME_DATA: {"invalid": {}}}
-    entry.entry_id = "test"
-
-    hass.data = {DOMAIN: {"test": mock_coordinator}}
-    async_add_entities = MagicMock()
-
-    with caplog.at_level(logging.WARNING):
-        await async_setup_entry(hass, entry, async_add_entities)
-
-    assert "Error creating sensor for game ID invalid" in caplog.text
 
 
 async def test_sensor_import_collection_option(hass, mock_coordinator):
@@ -292,3 +278,46 @@ async def test_sensor_plays_invalid_game_id(hass, mock_coordinator):
 
     assert attrs["bgg_id"] == "not_an_int"
     assert attrs["image"] is None
+
+
+async def test_sensor_fallback_to_coordinator_games(hass, mock_coordinator):
+    """Test sensor creation falls back to coordinator.game_ids if options empty."""
+    from custom_components.bgg_sync.sensor import async_setup_entry
+    from custom_components.bgg_sync.const import DOMAIN
+
+    entry = MagicMock()
+    entry.options = {}  # Empty options, mimicking the bug scenario
+    entry.entry_id = "test"
+
+    # Coordinator knows about the game from init merge
+    mock_coordinator.game_ids = [777]
+    mock_coordinator.game_data = {
+        777: {
+            "custom_image": "http://custom",
+            "nfc_tag": "test_nfc",
+            "music": "spotify:track:123",
+        }
+    }
+
+    # Mock data fetch result
+    mock_coordinator.data = {
+        "game_details": {777: {"name": "Fetched Name"}},
+        "game_plays": {777: 10},
+    }
+
+    hass.data = {DOMAIN: {"test": mock_coordinator}}
+    async_add_entities = MagicMock()
+
+    await async_setup_entry(hass, entry, async_add_entities)
+
+    added_list = async_add_entities.call_args[0][0]
+    game_sensors = [e for e in added_list if isinstance(e, BggGameSensor)]
+
+    # Assert sensor was created despite empty options
+    assert len(game_sensors) == 1
+    sensor = game_sensors[0]
+    assert sensor.game_id == 777
+    # Verify metadata was correctly passed from coordinator.game_data
+    assert sensor.user_data["custom_image"] == "http://custom"
+    assert sensor.user_data["nfc_tag"] == "test_nfc"
+    assert sensor.user_data["music"] == "spotify:track:123"

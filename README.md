@@ -137,13 +137,13 @@ data:
       winner: true
       score: 100
       position: "1"
-      color: "Blue"
+      colour: "Blue"
       rating: 10
     - name: "Kelly"
       winner: false
       score: 85
       position: "2"
-      color: "Red"
+      colour: "Red"
 ```
 
 **Arguments:**
@@ -161,7 +161,7 @@ data:
     *   `winner`: Boolean (true/false) for winner status.
     *   `score`: Player score (string or number).
     *   `position`: Starting position or rank (string).
-    *   `color`: Player color or team (string).
+    *   `colour`: Player colour or team (string).
     *   `rating`: Player's rating for the game (1-10 integer).
 
 ## Troubleshooting

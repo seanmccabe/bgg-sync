@@ -49,11 +49,11 @@ record_play:
       selector:
         boolean:
     players:
-      description: "List of players. Each player can have: name (or BGG username), winner (true/false), score, position, color, and rating (1-10)."
+      description: "List of players. Each player can have: name (or BGG username), winner (true/false), score, position, colour, and rating (1-10)."
       example: |-
         [
-          {"name": "seanmccabe", "winner": true, "score": "100", "position": "1", "color": "Blue", "rating": 10},
-          {"name": "Kelly", "winner": false, "score": "85", "position": "2", "color": "Red"}
+          {"name": "seanmccabe", "winner": true, "score": "100", "position": "1", "colour": "Blue", "rating": 10},
+          {"name": "Kelly", "winner": false, "score": "85", "position": "2", "colour": "Red"}
         ]
       selector:
         object:

@@ -56,7 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     all_game_ids = list(set(game_ids_from_csv + [int(k) for k in game_data.keys()]))
 
     coordinator = BggDataUpdateCoordinator(
-        hass, username, password, api_token, all_game_ids
+        hass, username, password, api_token, all_game_ids, game_data
     )
     await coordinator.async_config_entry_first_refresh()
 
@@ -117,6 +117,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         async def async_track_game(call):
             """Add a game to be tracked."""
+            _LOGGER.info("Service 'track_game' called with data: %s", call.data)
             bgg_id = call.data["bgg_id"]
             # Handle optional args
             nfc = call.data.get("nfc_tag")
@@ -145,12 +146,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 _LOGGER.error("No BGG Sync configuration found to track game.")
                 return
 
+            _LOGGER.info(
+                "Found config entry for user: %s", entry.data.get(CONF_BGG_USERNAME)
+            )
+
             # Update Options
             new_options = dict(entry.options)
             current_data = new_options.get(CONF_GAME_DATA, {}).copy()
 
             # Update the game entry
-            metadata = current_data.get(str(bgg_id), {})
+            metadata = current_data.get(str(bgg_id), {}).copy()
             # If it was an empty dict from previous legacy import, it might be there
 
             if nfc:

@@ -14,6 +14,28 @@ All notable changes to this project will be documented in this file.
 - **Reliability:** By offloading API complexity to an external library with its own 100% test coverage, the integration core is leaner and more robust. `bgg-sync` itself maintains 100% coverage on the integration layer.
 - **Internal Cleanup:** Refactored `coordinator.py` to use a helper method for game data mapping, strictly enforcing DRY principles and Type Hinting.
 
+## [1.2.3] - 2026-02-22
+
+### Fixed
+- **Track Game Updates:** Fixed an issue where using the `track_game` service to update custom attributes (like `nfc_tag`, `music`, or `custom_image`) required a forced reload of the integration to take effect (#7).
+
+## [1.2.2] - 2026-01-18
+
+### Added
+- **Local Image Caching:** Game images (and custom overrides) are now downloaded and cached locally in `/config/www/bgg_images/`. This significantly improves image loading reliability and speed in the Home Assistant dashboard.
+- **Image Optimisation:** Cached images are now automatically resized to a maximum of 500x500 pixels. This drastically reduces memory usage and dashboard load times, preventing crashes when displaying large collections.
+- **Improved Custom Image Support:** Setting a `custom_image` for a game now handles the download and caching process automatically, ensuring your custom art is always displayed correctly even if the original URL is external.
+
+### Fixed
+- **API Stability:** Implemented intelligent rate limiting and automatic retries for BoardGameGeek API requests. This resolves `429 Too Many Requests` errors that could occur when syncing large collections, ensuring data updates are much more reliable.
+- **Image Loading:** Fixed an issue where game box art images would fail to load in Home Assistant because of whitespace characters in the URLs returned by the BoardGameGeek API.
+- **Todo List Name:** Removed duplicate "Shelf" from the Todo list entity name (e.g., prevented "User's Shelf Shelf").
+- **Sensor Availability:** Fixed a critical bug where sensors for games tracked via service calls (but not in the BGG collection) would become "Unavailable" after a configuration update or restart.
+- **Attribute Persistence:** Fixed an issue where custom attributes (NFC tags, Music links, Custom Images) for tracked games were lost upon integration reload.
+
+### Changed
+- **Australian Localisation:** Updated the `record_play` service to accept `colour` in addition to `color` for player details, allowing for correct Australian/British spelling.
+
 ## [1.2.1] - 2026-01-16
 
 ### Changed
@@ -25,8 +47,8 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **Force Sync Button:** Added a button entity to manually trigger a synchronisation with BoardGameGeek.
 - **Last Sync Sensor:** Added a diagnostic sensor (`bgg_last_sync`) to track the timestamp of the last successful data fetch.
-- **String Localization:** Added friendly localised names for the services.
-- **Player Details in Recording:** The `record_play` service now supports passing player names, winners, scores, positions, colors, and ratings to BoardGameGeek.
+- **String Localisation:** Added friendly localised names for the services.
+- **Player Details in Recording:** The `record_play` service now supports passing player names, winners, scores, positions, colours, and ratings to BoardGameGeek.
 - **Enhanced Recording Metadata:** Added support for `location`, `incomplete`, and `nowinstats` flags in the `record_play` service.
 
 ### Changed

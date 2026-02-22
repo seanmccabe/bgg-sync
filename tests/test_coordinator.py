@@ -4,7 +4,8 @@ import pytest
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from custom_components.bgg_sync.coordinator import BggDataUpdateCoordinator
 from aiohttp import ClientError
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch, mock_open
+from custom_components.bgg_sync.const import IMAGE_CACHE_DIR
 
 
 async def test_coordinator_data_update(
@@ -384,3 +385,174 @@ async def test_coordinator_generic_error(hass, mock_bgg_session):
         await coordinator._async_update_data()
 
     assert "Error communicating with BGG API" in str(excinfo.value)
+
+
+@pytest.fixture
+async def mock_coordinator(hass, mock_bgg_session):
+    """Create a mock coordinator."""
+    return BggDataUpdateCoordinator(hass, "test_user", "password", None, [123], {})
+
+
+async def async_return(result):
+    return result
+
+
+async def test_download_image_empty_url(mock_coordinator):
+    """Test downloading with empty URL returns None."""
+    result = await mock_coordinator._download_image("", 123)
+    assert result is None
+
+
+async def test_download_image_webp(hass, mock_coordinator):
+    """Test downloading a webp image."""
+    with patch("os.makedirs"), patch("os.path.exists", return_value=False), patch(
+        "custom_components.bgg_sync.coordinator.async_get_clientsession"
+    ) as mock_session, patch(
+        "custom_components.bgg_sync.coordinator.Image.open"
+    ) as mock_img_open, patch("builtins.open", mock_open()):
+        # Mock Session
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.read.side_effect = lambda: async_return(b"image_data")
+        mock_session.return_value.get.return_value.__aenter__.return_value = mock_resp
+
+        # Mock Image
+        mock_img = MagicMock()
+        mock_img_open.return_value.__enter__.return_value = mock_img
+
+        result = await mock_coordinator._download_image(
+            "http://example.com/image.webp", 123
+        )
+
+        assert result == f"/local/{IMAGE_CACHE_DIR}/123.webp"
+        mock_img.save.assert_called()
+
+
+async def test_download_image_cache_hit(hass, mock_coordinator):
+    """Test existing cache prevents re-download."""
+    url = "http://example.com/image.jpg"
+
+    # Mocking os.path.exists to return True for both file and meta
+    with patch("os.path.exists", return_value=True), patch(
+        "builtins.open", mock_open(read_data=url)
+    ), patch(
+        "custom_components.bgg_sync.coordinator.async_get_clientsession"
+    ) as mock_session:
+        result = await mock_coordinator._download_image(url, 123)
+
+        assert result == f"/local/{IMAGE_CACHE_DIR}/123.jpg"
+        # Verify NO download occurred
+        mock_session.assert_not_called()
+
+
+async def test_download_image_resize_failure_fallback(hass, mock_coordinator):
+    """Test fallback to saving original if resize fails."""
+
+    with patch("os.makedirs"), patch("os.path.exists", return_value=False), patch(
+        "custom_components.bgg_sync.coordinator.async_get_clientsession"
+    ) as mock_session, patch(
+        "custom_components.bgg_sync.coordinator.Image.open",
+        side_effect=Exception("Resize Error"),
+    ), patch("builtins.open", mock_open()) as mock_file:
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.read.side_effect = lambda: async_return(b"raw_data")
+        mock_session.return_value.get.return_value.__aenter__.return_value = mock_resp
+
+        result = await mock_coordinator._download_image(
+            "http://example.com/image.jpg", 123
+        )
+
+        assert result == f"/local/{IMAGE_CACHE_DIR}/123.jpg"
+
+        # Verify we wrote the raw data (fallback)
+        writes = [arg[0][0] for arg in mock_file().write.call_args_list]
+        assert b"raw_data" in writes
+
+
+async def test_download_image_general_exception(hass, mock_coordinator):
+    """Test general exception handling returns None."""
+
+    # Force os.makedirs to raise exception
+    with patch("os.path.exists", return_value=False), patch(
+        "os.makedirs", side_effect=OSError("Disk Full")
+    ):
+        result = await mock_coordinator._download_image("http://url", 123)
+        assert result is None
+
+
+async def test_read_meta_exception(hass, mock_coordinator):
+    """Test exception when reading metadata file proceeds to download."""
+    url = "http://example.com/image.jpg"
+
+    # Mock exists=True to try reading meta
+    with patch("os.path.exists", return_value=True), patch(
+        "custom_components.bgg_sync.coordinator.async_get_clientsession"
+    ) as mock_session, patch(
+        "custom_components.bgg_sync.coordinator.Image.open"
+    ) as mock_img_open, patch("builtins.open", mock_open(read_data="should_fail")):
+        # Mock download success for when we inevitably proceed
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.read.side_effect = lambda: async_return(b"data")
+        mock_session.return_value.get.return_value.__aenter__.return_value = mock_resp
+
+        # Mock Image open for the save part
+        mock_img = MagicMock()
+        mock_img_open.return_value.__enter__.return_value = mock_img
+
+        # We intercept executor job.
+        # If the job function name is 'read_meta', we raise.
+        # If 'write_file', we let it pass.
+
+        async def side_effect(target, *args):
+            if target.__name__ == "read_meta":
+                raise Exception("Meta Read Fail")
+            # For write_file, just run it immediately?
+            # Or just return None (success representation here).
+            # The original code awaits it.
+            if target.__name__ == "write_file":
+                target()  # Execute it to trigger the open() calls inside
+                return None
+            return None
+
+        with patch.object(hass, "async_add_executor_job", side_effect=side_effect):
+            result = await mock_coordinator._download_image(url, 123)
+
+            # It should have returned the local path
+            assert result == f"/local/{IMAGE_CACHE_DIR}/123.jpg"
+
+            # And we confirm download WAS called (because metadata read failed)
+            assert mock_session.return_value.get.called
+
+
+async def test_coordinator_init_game_data_normalization(hass, mock_bgg_session):
+    """Test that game_data keys are normalized to int, and invalid ones skipped."""
+    raw_data = {
+        "123": {"prop": "val"},
+        "invalid": {"prop": "bad"},
+        456: {"prop": "val2"},
+    }
+
+    coord = BggDataUpdateCoordinator(hass, "user", None, None, [], raw_data)
+
+    assert 123 in coord.game_data
+    assert 456 in coord.game_data
+    assert "invalid" not in coord.game_data
+    assert coord.game_data[123] == {"prop": "val"}
+
+async def test_cache_images(hass, mock_coordinator):
+    """Test caching logic correctly overrides image dict entries."""
+    test_data = {
+        "game_details": {
+            123: {"image": "http://img.com/123.jpg"}
+        }
+    }
+    
+    from unittest.mock import patch
+    with patch.object(mock_coordinator, "_download_image", return_value="/local/bgg_sync/123.jpg"):
+        await mock_coordinator._cache_images(test_data)
+        
+    assert test_data["game_details"][123]["original_image"] == "http://img.com/123.jpg"
+    assert test_data["game_details"][123]["image"] == "/local/bgg_sync/123.jpg"
+    assert test_data["game_details"][123]["thumbnail"] == "/local/bgg_sync/123.jpg"
