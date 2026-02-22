@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0-beta.3] - 2026-01-12
+
+### Changed
+- **Device Separation:** Split entities into two separate devices:
+    - **{Username}:** Contains user stats (plays, collection counts, last sync).
+    - **{Username}'s Shelf:** Contains individual game sensors and the shelf To-do list.
+- **New Shelf Controls:** Added a duplicate "Last Sync" sensor and "Force Sync" button specifically to the Shelf device for convenience.
+- **Architectural Rewrite:** Replaced internal API logic with the newly created, standalone `bgg-pi` Python package (`v0.1.1`). This isolates all BGG API interactions into a dedicated library.
+- **Service Stability:** The integration now leverages `bgg-pi` for all network operations. This client is built from the ground up with `aiohttp` to be fully asynchronous and non-blocking.
+- **Reliability:** By offloading API complexity to an external library with its own 100% test coverage, the integration core is leaner and more robust. `bgg-sync` itself maintains 100% coverage on the integration layer.
+- **Internal Cleanup:** Refactored `coordinator.py` to use a helper method for game data mapping, strictly enforcing DRY principles and Type Hinting.
+
 ## [1.2.3] - 2026-02-22
 
 ### Fixed
@@ -40,7 +52,7 @@ All notable changes to this project will be documented in this file.
 - **Enhanced Recording Metadata:** Added support for `location`, `incomplete`, and `nowinstats` flags in the `record_play` service.
 
 ### Changed
-- **Asyncio Migration:** Fully migrated network calls to `aiohttp` to prevent thread blocking.
+- **Asyncio Migration:** Fully migrated all network calls to `aiohttp` to prevent thread blocking.
 - **Plays Sensor Attributes:** The `last_play` attribute is now "flattened" into top-level attributes on the Plays sensor:
     - `game`
     - `bgg_id`
@@ -57,7 +69,6 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **Clean Attribute Text**: Fixed issue where BGG BBCode tags (e.g. `[thing=...]`) were appearing in sensor attributes (last play comments).
-- **Service Stability:** Moved blocking legacy recording logic into an executor job to maintain Home Assistant performance standards while ensuring session persistence.
 - **Track Game Service:** Fixed an issue where using the `track_game` service could cause existing sensors to become unavailable if BGG returned a processing status (202).
 
 

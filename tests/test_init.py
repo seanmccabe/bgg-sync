@@ -1,7 +1,6 @@
 """Tests for BGG Sync init."""
 import logging
-from unittest.mock import MagicMock, patch
-
+from unittest.mock import MagicMock, patch, AsyncMock
 
 from custom_components.bgg_sync import (
     async_setup_entry,
@@ -16,7 +15,7 @@ from custom_components.bgg_sync.const import (
 )
 
 
-async def test_setup_unload_entry(hass):
+async def test_setup_unload_entry(hass, mock_bgg_session):
     """Test setting up and unloading a config entry."""
     entry = MagicMock()
     entry.data = {CONF_BGG_USERNAME: "test_user", "games": "123, 456"}
@@ -44,21 +43,27 @@ async def test_setup_unload_entry(hass):
             assert mock_unload.called
             assert entry.entry_id not in hass.data[DOMAIN]
 
+    await hass.async_block_till_done()
 
-async def test_service_record_play(hass):
+
+async def test_service_record_play(hass, mock_bgg_session):
     """Test the record_play service."""
     entry = MagicMock()
     entry.data = {CONF_BGG_USERNAME: "test_user", CONF_BGG_PASSWORD: "password"}
     entry.options = {}
     entry.entry_id = "test"
 
+    # Mock BggClient
     with patch(
         "homeassistant.config_entries.ConfigEntries.async_entries", return_value=[entry]
     ), patch(
         "custom_components.bgg_sync.BggDataUpdateCoordinator.async_config_entry_first_refresh"
     ), patch(
         "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups"
-    ), patch("custom_components.bgg_sync.record_play_on_bgg") as mock_record:
+    ), patch("custom_components.bgg_sync.BggClient") as mock_client_cls:
+        mock_client_instance = mock_client_cls.return_value
+        mock_client_instance.record_play = AsyncMock()
+
         await async_setup_entry(hass, entry)
 
         await hass.services.async_call(
@@ -72,12 +77,16 @@ async def test_service_record_play(hass):
             blocking=True,
         )
 
-        assert mock_record.called
-        assert mock_record.call_args[0][0] == "test_user"
-        assert mock_record.call_args[0][6][0]["name"] == "Sean"
+        assert mock_client_instance.record_play.called
+        args = mock_client_instance.record_play.call_args
+        assert args[0][0] == 123  # game_id
+        # args[0][4] is players
+        assert args[0][4][0]["name"] == "Sean"
+
+    await hass.async_block_till_done()
 
 
-async def test_service_record_play_errors(hass, caplog):
+async def test_service_record_play_errors(hass, caplog, mock_bgg_session):
     """Test failures in record_play service."""
     entry = MagicMock()
     entry.data = {CONF_BGG_USERNAME: "test_user"}  # NO PASSWORD
@@ -112,91 +121,10 @@ async def test_service_record_play_errors(hass, caplog):
             )
         assert "No BGG account configured for unknown_user" in caplog.text
 
-
-def test_record_play_logic_requests():
-    """Test the record_play_on_bgg logic using requests and JSON."""
-    from custom_components.bgg_sync import record_play_on_bgg
-
-    mock_session = MagicMock()
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.text = '{"success":1}'
-    mock_session.post.return_value = mock_resp
-
-    with patch("requests.Session", return_value=mock_session):
-        players = [
-            {
-                "name": "Sean",
-                "winner": True,
-                "score": 100,
-                "position": "1",
-                "color": "Blue",
-                "rating": 5,
-            }
-        ]
-        record_play_on_bgg(
-            "u", "p", 123, "2022-01-01", 30, "Fun", players, "Home", True, True
-        )
-
-        # Check login (still form/json depending on code, let's see)
-        # Login uses JSON
-        assert mock_session.post.call_count == 2
-        calls = mock_session.post.call_args_list
-
-        # Verify Play Record JSON
-        assert "/geekplay.php" in calls[1][0][0]
-        payload = calls[1][1]["json"]
-        assert payload["objectid"] == 123
-        assert payload["location"] == "Home"
-        assert payload["incomplete"] is True
-        assert payload["nowinstats"] is True
-        assert payload["players"][0]["name"] == "Sean"
-        assert payload["players"][0]["win"] is True
-        assert payload["players"][0]["username"] == "Sean"
-        assert payload["players"][0]["score"] == "100"
-        assert payload["players"][0]["position"] == "1"
-        assert payload["players"][0]["color"] == "Blue"
-        assert payload["players"][0]["rating"] == 5
-        assert payload["players"][0]["selected"] is True
-        assert payload["players"][0]["new"] is True
+    await hass.async_block_till_done()
 
 
-def test_record_play_logic_fail_requests(caplog):
-    """Test failure in recording play."""
-    from custom_components.bgg_sync import record_play_on_bgg
-
-    mock_session = MagicMock()
-    mock_resp = MagicMock()
-    mock_resp.status_code = 401
-    mock_resp.text = "Unauthorized"
-    mock_session.post.return_value = mock_resp
-
-    with patch("requests.Session", return_value=mock_session):
-        with caplog.at_level(logging.ERROR, logger="custom_components.bgg_sync"):
-            record_play_on_bgg("u", "p", 123, None, None, None, None)
-        assert "BGG Login failed for u" in caplog.text
-
-        # Test play recording fail
-        caplog.clear()
-        mock_resp.status_code = 200
-        mock_resp.text = '{"error":"Failed"}'
-        with caplog.at_level(logging.ERROR, logger="custom_components.bgg_sync"):
-            record_play_on_bgg("u", "p", 123, None, None, None, None)
-        assert "Failed to record play on BGG" in caplog.text
-
-
-def test_record_play_logic_exception(caplog):
-    """Test exception during record play."""
-    from custom_components.bgg_sync import record_play_on_bgg
-
-    # Patch Session directly to raise exception on init
-    with patch("requests.Session", side_effect=Exception("Connection Error")):
-        with caplog.at_level(logging.ERROR, logger="custom_components.bgg_sync"):
-            record_play_on_bgg("u", "p", 123, None, None, None, None)
-        assert "Error recording play on BGG: Connection Error" in caplog.text
-
-
-async def test_service_track_game(hass):
+async def test_service_track_game(hass, mock_bgg_session):
     """Test the track_game service."""
     entry = MagicMock()
     entry.data = {CONF_BGG_USERNAME: "test_user"}
@@ -249,6 +177,8 @@ async def test_service_track_game(hass):
                 blocking=True,
             )
             assert mock_log.called
+
+    await hass.async_block_till_done()
 
 
 async def test_async_reload_entry(hass):
