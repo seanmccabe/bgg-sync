@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.3] - 2026-02-22
+
+### Fixed
+- **Track Game Updates:** Fixed an issue where using the `track_game` service to update custom attributes (like `nfc_tag`, `music`, or `custom_image`) required a forced reload of the integration to take effect (#7).
+
 ## [1.2.2] - 2026-01-18
 
 ### Added

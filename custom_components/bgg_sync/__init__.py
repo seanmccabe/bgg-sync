@@ -146,7 +146,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             new_options = dict(entry.options)
             current_data = new_options.get(CONF_GAME_DATA, {}).copy()
 
-            metadata = current_data.get(str(bgg_id), {})
+            metadata = current_data.get(str(bgg_id), {}).copy()
             if nfc:
                 metadata[CONF_NFC_TAG] = nfc
             if music:
