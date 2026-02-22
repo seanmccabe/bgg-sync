@@ -20,7 +20,6 @@ from .const import (
     CONF_NFC_TAG,
     CONF_MUSIC,
     CONF_CUSTOM_IMAGE,
-    CONF_GAME_DATA,
     CONF_IMPORT_COLLECTION,
 )
 from .coordinator import BggDataUpdateCoordinator
@@ -59,32 +58,18 @@ async def async_setup_entry(
         BggLastSyncSensor(coordinator),
     ]
 
-    # Parse game data from options
-    # Support legacy CONF_GAMES list and new CONF_GAME_DATA dict
-    game_data = entry.options.get(CONF_GAME_DATA, {})
-
-    # Backwards compatibility for CSV list
-    legacy_games = entry.options.get("games", "")  # literal string "games" from const
-    if legacy_games:
-        for gid_str in legacy_games.split(","):
-            if gid_str.strip().isdigit():
-                gid = int(gid_str.strip())
-                if gid not in game_data:
-                    game_data[gid] = {}
-
     # Create sensors for explicitly tracked games
-    for game_id, metadata in game_data.items():
-        try:
-            g_id = int(game_id)
-            entities.append(BggGameSensor(coordinator, g_id, metadata))
-        except ValueError:
-            _LOGGER.warning("Error creating sensor for game ID %s: invalid ID", game_id)
+    # We use coordinator.game_ids which contains the merged list from config data and options
+    for g_id in coordinator.game_ids:
+        # Get metadata for this game if available (e.g. custom image, nfc)
+        metadata = coordinator.game_data.get(g_id, {})
+        entities.append(BggGameSensor(coordinator, g_id, metadata))
 
     # Add entire collection if enabled
     if entry.options.get(CONF_IMPORT_COLLECTION, False):
         collection = coordinator.data.get("collection", {})
         for g_id in collection:
-            if g_id not in game_data and str(g_id) not in game_data:
+            if g_id not in coordinator.game_ids:
                 entities.append(BggGameSensor(coordinator, g_id, {}))
 
     async_add_entities(entities)
@@ -251,11 +236,8 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
             return cust
 
         # 2. BGG Image
-        return (
-            self.coordinator.data.get("game_details", {})
-            .get(self.game_id, {})
-            .get("image")
-        )
+        details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
+        return details.get("image") or details.get("thumbnail")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
