@@ -541,18 +541,18 @@ async def test_coordinator_init_game_data_normalization(hass, mock_bgg_session):
     assert "invalid" not in coord.game_data
     assert coord.game_data[123] == {"prop": "val"}
 
+
 async def test_cache_images(hass, mock_coordinator):
     """Test caching logic correctly overrides image dict entries."""
-    test_data = {
-        "game_details": {
-            123: {"image": "http://img.com/123.jpg"}
-        }
-    }
-    
+    test_data = {"game_details": {123: {"image": "http://img.com/123.jpg"}}}
+
     from unittest.mock import patch
-    with patch.object(mock_coordinator, "_download_image", return_value="/local/bgg_sync/123.jpg"):
+
+    with patch.object(
+        mock_coordinator, "_download_image", return_value="/local/bgg_sync/123.jpg"
+    ):
         await mock_coordinator._cache_images(test_data)
-        
+
     assert test_data["game_details"][123]["original_image"] == "http://img.com/123.jpg"
     assert test_data["game_details"][123]["image"] == "/local/bgg_sync/123.jpg"
     assert test_data["game_details"][123]["thumbnail"] == "/local/bgg_sync/123.jpg"
