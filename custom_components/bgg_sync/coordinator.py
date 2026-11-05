@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import BASE_URL, BGG_URL, IMAGE_CACHE_DIR, CONF_CUSTOM_IMAGE
+from .const import API_HEADERS, BASE_URL, BGG_URL, IMAGE_CACHE_DIR, CONF_CUSTOM_IMAGE
 import os
 from PIL import Image
 import io
@@ -49,9 +49,9 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 except ValueError:
                     continue
         self.logged_in = False
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
-        }
+        # Identify the application honestly: browser impersonation can trigger
+        # Cloudflare challenges on BGG's authenticated XML API (issue #11).
+        self.headers = API_HEADERS.copy()
 
         if self.api_token:
             self.headers["Authorization"] = f"Bearer {self.api_token}"

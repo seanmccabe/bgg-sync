@@ -17,6 +17,7 @@ from .const import (
     CONF_API_TOKEN,
     CONF_GAMES,
     BASE_URL,
+    API_HEADERS,
     CONF_ENABLE_LOGGING,
     CONF_IMPORT_COLLECTION,
     CONF_ENABLE_SHELF_TODO,
@@ -56,7 +57,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         # We must ignore self-signed certs or verify? requests verifies by default.
         # Adding timeout is good practice.
         session = async_get_clientsession(hass)
-        headers = {"Authorization": f"Bearer {token}"}
+        headers = {**API_HEADERS, "Authorization": f"Bearer {token}"}
         async with session.get(url, headers=headers, timeout=10) as response:
             # BGG returns 200 even for errors sometimes, but 401/403 for bad auth if enforced.
             if response.status == 401:
