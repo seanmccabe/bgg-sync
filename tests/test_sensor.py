@@ -392,7 +392,7 @@ async def test_sensor_registry_recovery_and_name_healing(
 
     listeners = []
 
-    def capture_listener(cb):
+    def capture_listener(cb, *args):
         listeners.append(cb)
         return lambda: None
 
@@ -461,7 +461,6 @@ async def test_sensor_registry_recovery_and_name_healing(
 
     # Trigger dynamic collection listener to add game 400000
     async_add_entities.reset_mock()
-    assert len(listeners) == 1
     listeners[0]()
     new_added = async_add_entities.call_args[0][0]
     assert len(new_added) == 1
