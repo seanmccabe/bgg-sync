@@ -19,12 +19,12 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 *   **Play Logging**: Includes an action to log plays to your BGG account.
 *   **Multi-User**: Supports tracking multiple BGG accounts.
 *   **Wishlist Monitoring**: Dedicated sensors to track the size of your collection, Owned, Want-to-own, Wishlist and more!
-*   **Custom Attributes**: Add custom attributes including nfc_tag and music to your sensors to track additional information about your games and create amazing automations.
-*   **Direct API Integration**: Uses the BGG XML API2 directly (no third-party library dependencies) for maximum reliability.
-*   **Authentication Support**: Supports BGG's new API Token requirement for data fetching.
+*   **Custom Attributes**: Add custom attributes including `nfc_tag` and `music` to your sensors to track additional information about your games and create amazing automations.
+*   **Async BGG Client (`bgg-pi`)**: Powered by [`bgg-pi`](https://github.com/seanmccabe/bgg-pi), a dedicated, fully asynchronous Python client for the BoardGameGeek XML API2.
+*   **Authentication Support**: Supports BGG's API Token requirement for data fetching.
 *   **Smart Polling**: Updates every 30 minutes to respect BGG's rate limits and server load.
-*   **Force Sync**: Includes a button entity to manually trigger an immediate update.
-*   **Diagnostics**: Diagnostic sensors (e.g., `last_sync`) to monitor integration health.
+*   **Force Sync**: Includes button entities on both the User and Shelf devices to manually trigger an immediate update.
+*   **Diagnostics**: Includes `Sync OK` (`True`/`False`) and `Last Sync` diagnostic sensors to monitor integration health and alert on sync issues.
 
 ## Installation
 
@@ -59,7 +59,7 @@ IF you want to turn on Collection tracking and not just via the to-do list, you 
 4.  Enable the "Track Collection" option.
 5.  Submit.
 
-**Note:** Collection tracking can take a few minutes to populate. In large collections this can great hundreds of sensors, so it may take a while and may cause degradation in performance.
+**Note:** Collection tracking can take a few minutes to populate. In large collections this can create hundreds of sensors, so it may take a while and may cause degradation in performance.
 
 ![Collection Screenshot](images/options.jpeg)
 
@@ -67,28 +67,34 @@ IF you want to turn on Collection tracking and not just via the to-do list, you 
 
 ![Sensors Screenshot](images/sensors.jpeg)
 
-The integration creates the following sensors:
+The integration creates the following entities across two devices:
 
-*   `sensor.bgg_sync_{username}_plays`: Total number of plays recorded.
-    *   *Attributes*: `last_play` (Object containing: `game`, `game_id`, `date`, `comment`).
-*   `sensor.bgg_sync_{username}_collection`: Total number of games in your collection (owned).
-*   `sensor.bgg_sync_{username}_{list_type}`: Counts for various lists:
-    *   `owned_boardgames`, `owned_expansions`
-    *   `wishlist`, `want_to_play`, `want_to_buy`, `for_trade`, `preordered`
-    *   `wishlist`, `want_to_play`, `want_to_buy`, `for_trade`, `preordered`
+*   **User Device** (`{Username}`):
+    *   `sensor.{username}_plays`: Total number of plays recorded.
+        *   *Attributes*: `game`, `bgg_id`, `date`, `comment`, `expansions`, `winners`, `players`, `image` (cached box art of the last played game).
+    *   `sensor.{username}_collection`: Total number of owned games in your collection.
+    *   `sensor.{username}_{list_type}`: Counts for various collection lists:
+        *   `games_owned` (`owned_boardgames`), `expansions_owned` (`owned_expansions`)
+        *   `wishlist`, `want_to_play`, `want_to_buy`, `for_trade`, `preordered`
+    *   `sensor.{username}_sync_ok` *(Diagnostic)*: Reports `True` when the latest BGG sync succeeded and `False` if an error occurred.
+    *   `sensor.{username}_last_sync` *(Diagnostic)*: Timestamp of the last successful sync.
+    *   `button.{username}_force_sync` *(Config)*: Manually triggers an immediate BGG sync.
 *   **Shelf Device** (`{Username}'s Shelf`):
-    *   `sensor.{game_name}`: A rich sensor for each tracked game.
+    *   `sensor.{game_name}`: A rich sensor for each tracked game (shows `Unavailable` if a sync fails before game data is available).
     *   **State**: Total Plays.
-    *   **Entity Picture**: The authentic game box art from BGG (or your custom override).
+    *   **Entity Picture**: Locally cached game box art from BGG (or your custom override).
     *   **Attributes**:
         *   `bgg_id`, `bgg_url`, `image_url`
-        *   `rank`, `year`, `weight`, `rating`, `bayes_rating`
+        *   `rank`, `year`, `weight`, `rating`, `bayes_rating`, `stddev`, `median`
         *   `min_players`, `max_players`
         *   `playing_time`, `min_playtime`, `max_playtime`
         *   `users_rated`, `owned_by`, `sub_type` (boardgame/expansion)
         *   `coll_id` (collection ID if owned)
         *   `nfc_tag` (custom), `music` (custom)
         *   `custom_image` (functional, overrides entity picture)
+    *   `todo.{username}_s_shelf`: To-do list containing your owned collection.
+    *   `sensor.{username}_s_shelf_last_sync` *(Diagnostic)*: Timestamp of the last successful sync.
+    *   `button.{username}_s_shelf_force_sync`: Manually triggers an immediate BGG sync.
 
 ## Services
 
@@ -166,8 +172,9 @@ data:
 
 ## Troubleshooting
 
-### Sensors show "Unavailable" or 401 Errors
-Ensure you have provided a valid **API Token**. BGG has tightened security and requires this token for most XML API requests. Check your configuration via "Configure" in the Integrations page.
+### Sensors show "Unavailable", `Sync OK` is `False`, or 401/403 Errors
+*   Ensure you have provided a valid **API Token**. BGG requires this token for XML API requests. Check your configuration via "Configure" in the Integrations page.
+*   Check the **`Sync OK`** diagnostic sensor (`sensor.{username}_sync_ok`) on the User device—if it reports `False`, BGG's API may be temporarily unavailable or returning errors. Game sensors will automatically recover once the next sync succeeds.
 
 ### Play Logging fails
 The integration uses a specialised API login method. If you change your password, you must update it in the integration options. If logs show "Login failed," ensure your credentials are correct.
@@ -181,6 +188,7 @@ logger:
   default: info
   logs:
     custom_components.bgg_sync: debug
+    bgg_pi: debug
 ```
 
 ## Future Features (Roadmap)
