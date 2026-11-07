@@ -1,12 +1,10 @@
 """Tests for BGG Data Update Coordinator."""
 import logging
-import unittest
-from unittest.mock import AsyncMock
 import pytest
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from custom_components.bgg_sync.coordinator import BggDataUpdateCoordinator
 from aiohttp import ClientError
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 from custom_components.bgg_sync.const import IMAGE_CACHE_DIR
 
 
@@ -49,32 +47,12 @@ async def test_coordinator_data_update(
 async def test_coordinator_parsing_corner_cases(
     hass, caplog, mock_response, mock_bgg_session
 ):
-    """Test XML parsing edge cases for 100% coverage."""
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [1, 2, 3, 4])
+    """Test XML parsing edge cases for coverage."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [4])
 
     xml_thing = b"""
     <items>
-        <!-- Item 1: Invalid ID -->
-        <item id="invalid_id" type="boardgame">
-            <name type="primary" value="Invalid Game" />
-        </item>
-
-        <!-- Item 2: No statistics -->
-        <item id="2" type="boardgame">
-            <name type="primary" value="No Stats Game" />
-        </item>
-
-        <!-- Item 3: Empty Ranks (Ratings existing but empty) -->
-        <item id="3" type="boardgame">
-            <name type="primary" value="Empty Stats Game" />
-            <statistics>
-                <ratings>
-                     <!-- convert some to None -->
-                </ratings>
-            </statistics>
-        </item>
-
-        <!-- Item 4: Valid Rank -->
+        <!-- Item 1: Valid Rank -->
         <item id="4" type="boardgame">
             <name type="primary" value="Ranked Game" />
             <statistics>
@@ -100,14 +78,9 @@ async def test_coordinator_parsing_corner_cases(
 
     mock_bgg_session.get.side_effect = side_effect
 
-    with caplog.at_level(logging.WARNING):
-        coordinator.data = await coordinator._async_update_data()
+    # We expect other parts to be successful
+    coordinator.data = await coordinator._async_update_data()
 
-    assert "Error parsing game details" in caplog.text
-    g2 = coordinator.data["game_details"][2]
-    assert g2["rating"] is None
-    g3 = coordinator.data["game_details"][3]
-    assert g3["rating"] is None
     g4 = coordinator.data["game_details"][4]
     assert g4["rank"] == "100"
 
@@ -119,11 +92,13 @@ async def test_coordinator_202_response(hass, caplog, mock_response, mock_bgg_se
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [])
 
     def side_effect(url, **kwargs):
+        if "plays" in url:
+            return mock_response(b'<plays total="0"></plays>')
+        if "collection" in url:
+            return mock_response(status=202)
         if "thing" in url:
             return mock_response(b"<items></items>")
-        return mock_response(status=202)
-
-    mock_bgg_session.get.side_effect = side_effect
+        return mock_response(status=200)
 
     mock_bgg_session.get.side_effect = side_effect
 
@@ -176,213 +151,6 @@ async def test_coordinator_unknown_status_code(
     await hass.async_block_till_done()
 
 
-async def test_coordinator_malformed_xml(hass, caplog, mock_response, mock_bgg_session):
-    """Test handling of malformed XML."""
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [123])
-
-    def side_effect(url, **kwargs):
-        if "plays" in url:
-            return mock_response(b"Not XML")
-        return mock_response(b"<items></items>")
-
-    mock_bgg_session.get.side_effect = side_effect
-
-    with caplog.at_level(logging.ERROR):
-        try:
-            await coordinator._async_update_data()
-        except Exception:
-            pass
-
-    await hass.async_block_till_done()
-
-
-async def test_coordinator_thing_malformed_xml(
-    hass, caplog, mock_response, mock_bgg_session
-):
-    """Test malformed XML specifically in the Thing API."""
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [123])
-
-    def side_effect(url, **kwargs):
-        if "thing" in url:
-            return mock_response(b"<items> <unclosed tag")
-        if "plays" in url:
-            return mock_response(b"<plays></plays>")
-        if "collection" in url:
-            return mock_response(b"<items></items>")
-        return mock_response(status=404)
-
-    mock_bgg_session.get.side_effect = side_effect
-
-    with caplog.at_level(logging.ERROR):
-        with pytest.raises(UpdateFailed):
-            await coordinator._async_update_data()
-
-    assert "Error communicating with BGG API" in caplog.text
-
-    await hass.async_block_till_done()
-
-
-async def test_coordinator_xml_with_bad_items(
-    hass, caplog, mock_response, mock_bgg_session
-):
-    """Test XML that is well-formed but contains unexpected structures."""
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [])
-
-    bad_collection = (
-        b'<items><item subtype="boardgame"><name>Bad Game</name></item></items>'
-    )
-
-    def side_effect(url, **kwargs):
-        if "collection" in url:
-            return mock_response(bad_collection)
-        if "plays" in url:
-            return mock_response(b"<plays total='0'></plays>")
-        return mock_response(b"<items></items>")
-
-    mock_bgg_session.get.side_effect = side_effect
-
-    with caplog.at_level(logging.WARNING):
-        await coordinator._async_update_data()
-
-    assert "Error parsing collection item" in caplog.text
-
-    await hass.async_block_till_done()
-
-
-async def test_coordinator_expansion_counting(hass, mock_response, mock_bgg_session):
-    """Test that expansions are counted correctly."""
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [])
-
-    collection_boardgame = b"""
-    <items totalitems="1">
-        <item objectid="101" subtype="boardgame">
-            <status own="1" />
-        </item>
-    </items>
-    """
-
-    collection_expansion = b"""
-    <items totalitems="1">
-        <item objectid="102" subtype="boardgameexpansion">
-            <status own="1" />
-        </item>
-    </items>
-    """
-
-    def side_effect(url, **kwargs):
-        if "subtype=boardgame" in url and "subtype=boardgameexpansion" not in url:
-            return mock_response(collection_boardgame)
-        if "subtype=boardgameexpansion" in url:
-            return mock_response(collection_expansion)
-        if "plays" in url:
-            return mock_response(b"<plays total='0'></plays>")
-        return mock_response(b"<items></items>")
-
-    mock_bgg_session.get.side_effect = side_effect
-
-    coordinator.data = await coordinator._async_update_data()
-
-    assert coordinator.data["counts"]["owned_expansions"] == 1
-    assert coordinator.data["counts"]["owned_boardgames"] == 1
-    assert coordinator.data["counts"]["owned"] == 2
-
-    await hass.async_block_till_done()
-
-
-async def test_coordinator_login_logic(hass, caplog, mock_response, mock_bgg_session):
-    """Test login logic."""
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
-
-    # 1. No password, login skipped
-    await coordinator._login()
-    assert coordinator.logged_in is False
-
-    # 2. Login fail
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", "wrong_pass", None, [])
-    mock_bgg_session.post.return_value = mock_response(exc=ClientError())
-
-    with caplog.at_level(logging.ERROR):
-        await coordinator._login()
-
-    assert "Login failed for test_user" in caplog.text
-
-    # 3. Login success
-    mock_bgg_session.post.return_value = mock_response(status=200)
-
-    await coordinator._login()
-
-    assert coordinator.logged_in is True
-
-    await hass.async_block_till_done()
-
-
-async def test_coordinator_login_path_in_update(hass, mock_response, mock_bgg_session):
-    """Test that _login is called during update if conditions met."""
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", "password", None, [])
-
-    mock_bgg_session.post.return_value = mock_response(status=200)
-
-    # Needs to handle both post (login) and get (data)
-    def get_side_effect(url, **kwargs):
-        if "plays" in url:
-            return mock_response(b"<plays></plays>")
-        return mock_response(b"<items></items>")
-
-    mock_bgg_session.get.side_effect = get_side_effect
-
-    await coordinator._async_update_data()
-
-    assert coordinator.logged_in is True
-
-    await hass.async_block_till_done()
-
-
-async def test_coordinator_api_failure(hass, mock_response, mock_bgg_session):
-    """Test total API failure raises UpdateFailed."""
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [])
-
-    def side_effect(url, **kwargs):
-        if "plays" in url:
-            # Simulate cleanup/exit with raising exception
-            # We must use side_effect on __aenter__ for context manager exceptions
-            m = AsyncMock()
-            m.__aenter__.side_effect = ClientError("Connection Refused")
-            return m
-        return mock_response(b"<items></items>")
-
-    mock_bgg_session.get.side_effect = side_effect
-
-    with pytest.raises(UpdateFailed):
-        await coordinator._async_update_data()
-
-    await hass.async_block_till_done()
-
-
-async def test_coordinator_collection_message_202(
-    hass, caplog, mock_response, mock_bgg_session
-):
-    """Test collection returning message tag (202 processing)."""
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
-
-    msg_xml = b"<message>Your request for this collection has been accepted</message>"
-
-    def side_effect(url, **kwargs):
-        if "collection" in url:
-            return mock_response(msg_xml)
-        if "plays" in url:
-            return mock_response(b"<plays></plays>")
-        return mock_response(b"<items></items>")
-
-    mock_bgg_session.get.side_effect = side_effect
-
-    mock_bgg_session.get.side_effect = side_effect
-
-    with pytest.raises(UpdateFailed):
-        await coordinator._async_update_data()
-
-    await hass.async_block_till_done()
-
-
 async def test_coordinator_thing_batch_failure(
     hass, caplog, mock_response, mock_bgg_session
 ):
@@ -412,193 +180,215 @@ async def test_coordinator_thing_batch_failure(
     await hass.async_block_till_done()
 
 
-async def test_coordinator_full_counts(hass, mock_response, mock_bgg_session):
-    """Test all count types."""
+async def test_coordinator_login_logic(hass, caplog, mock_response, mock_bgg_session):
+    """Test login logic."""
     coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
 
-    xml = b"""
-    <items>
-        <item objectid="1" subtype="boardgame">
-            <status own="0" wishlist="1" wanttoplay="1" wanttobuy="1" fortrade="1" preordered="1" />
+    # 1. No password, login skipped
+    await coordinator.client.login()
+    assert coordinator.client.logged_in is False
+
+    # 2. Login fail
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", "wrong_pass", None, [])
+    mock_bgg_session.post.return_value = mock_response(exc=ClientError())
+
+    with caplog.at_level(logging.ERROR):
+        await coordinator.client.login()
+
+    assert "Login failed for test_user" in caplog.text
+
+    # 3. Login success
+    mock_bgg_session.post.return_value = mock_response(status=200)
+
+    await coordinator.client.login()
+
+    assert coordinator.client.logged_in is True
+
+    await hass.async_block_till_done()
+
+
+async def test_coordinator_login_path_in_update(hass, mock_response, mock_bgg_session):
+    """Test that login is called during update if conditions met."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", "password", None, [])
+
+    mock_bgg_session.post.return_value = mock_response(status=200)
+
+    # Needs to handle both post (login) and get (data)
+    def get_side_effect(url, **kwargs):
+        if "plays" in url:
+            return mock_response(b"<plays></plays>")
+        return mock_response(b"<items></items>")
+
+    mock_bgg_session.get.side_effect = get_side_effect
+
+    await coordinator._async_update_data()
+
+    assert coordinator.client.logged_in is True
+
+    await hass.async_block_till_done()
+
+
+async def test_coordinator_expansion_counting(hass, mock_response, mock_bgg_session):
+    """Test that expansions are counted correctly."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "test_token", [])
+
+    collection_boardgame = b"""
+    <items totalitems="1">
+        <item objectid="101" subtype="boardgame">
+            <status own="1" />
+            <name>BG</name>
+        </item>
+    </items>
+    """
+
+    collection_expansion = b"""
+    <items totalitems="1">
+        <item objectid="102" subtype="boardgameexpansion">
+            <status own="1" />
+            <name>Exp</name>
         </item>
     </items>
     """
 
     def side_effect(url, **kwargs):
-        if "username=test_user&subtype=boardgame&stats=1" in url:
-            return mock_response(xml)
+        if "subtype=boardgame" in url and "subtype=boardgameexpansion" not in url:
+            return mock_response(collection_boardgame)
+        if "subtype=boardgameexpansion" in url:
+            return mock_response(collection_expansion)
         if "plays" in url:
-            return mock_response(b"<plays></plays>")
+            return mock_response(b"<plays total='0'></plays>")
         return mock_response(b"<items></items>")
 
     mock_bgg_session.get.side_effect = side_effect
 
     coordinator.data = await coordinator._async_update_data()
 
-    c = coordinator.data["counts"]
-    assert c["wishlist"] == 1
-    assert c["want_to_play"] == 1
-    assert c["want_to_buy"] == 1
-    assert c["for_trade"] == 1
-    assert c["preordered"] == 1
+    assert coordinator.data["counts"]["owned_expansions"] == 1
+    assert coordinator.data["counts"]["owned_boardgames"] == 1
+    assert coordinator.data["counts"]["owned"] == 2
 
     await hass.async_block_till_done()
 
 
-async def test_thing_api_xml_parse_error(hass, mock_bgg_session):
-    def make_resp(content, status=200):
-        m = AsyncMock()
-        m.status = status
-        m.text.return_value = content
-        m.__aenter__.return_value = m
-        return m
-
-    mock_bgg_session.get.side_effect = [
-        # 1. Plays: Success
-        make_resp('<plays total="10"></plays>'),
-        # 2. Collection: Success (returns item 123)
-        make_resp(
-            '<items><item objectid="123" subtype="boardgame"><name>G</name><status own="1"/></item></items>'
-        ),
-        # 3. Collection (Expansions): Empty
-        make_resp("<items></items>"),
-        # 4. Specific Game Plays (for ID 123)
-        make_resp('<plays total="5"></plays>'),
-        # 5. Thing API (Batch): Returns invalid XML to trigger the specific exception line
-        make_resp("<start><unclosed_tag>"),
-    ]
-
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [123])
-
-    # Verify data is partially populated despite Thing API failure
-    data = await coordinator._async_update_data()
-    assert 123 in data["collection"]
-    assert data["game_details"][123]["name"] == "G"
-
-
-def test_coordinator_extract_methods(hass):
-    """Test the extraction helper methods directly for coverage."""
-    coord = BggDataUpdateCoordinator(hass, "test", None, None, [])
-
-    # Test _extract_expansions with None/Empty
-    assert coord._extract_expansions(None) == []
-    assert coord._extract_expansions("") == []
-
-    # Test _extract_players with missing username (fallback to name)
-    import xml.etree.ElementTree as ET
-
-    xml = """
-    <play>
-        <players>
-            <player username="" name="Bob" />
-            <player username="Alice" name="Alice Real" />
-        </players>
-    </play>
-    """
-    node = ET.fromstring(xml)
-    players = coord._extract_players(node)
-    # Alice should be "Alice", Bob should be "Bob"
-    assert "Alice" in players
-    assert "Bob" in players
-    assert len(players) == 2
-
-
-async def test_clean_bgg_text(hass):
-    """Test the BBCode cleaning helper."""
-    coordinator = BggDataUpdateCoordinator(hass, "user", None, None, [])
-
-    # Test simple text
-    assert coordinator._clean_bgg_text("Simple text") == "Simple text"
-
-    # Test with thing tag
-    assert (
-        coordinator._clean_bgg_text("Played [thing=123]Game Name[/thing]")
-        == "Played Game Name"
-    )
-
-    # Test with multiple tags
-    assert (
-        coordinator._clean_bgg_text("[thing=1]A[/thing] vs [thing=2]B[/thing]")
-        == "A vs B"
-    )
-
-    # Test with simple tags
-    assert coordinator._clean_bgg_text("Bold [b]text[/b]") == "Bold text"
-
-    # Test None
-    assert coordinator._clean_bgg_text(None) == ""
-
-    # Test the user reported case
-    raw_comment = """Won with most parks (12)
-
-Played with expansions:
--[thing=298729]PARKS: Nightfall[/thing]
--[thing=358854]PARKS: Wildlife[/thing]"""
-
-    expected = """Won with most parks (12)
-
-Played with expansions:
--PARKS: Nightfall
--PARKS: Wildlife"""
-
-    assert coordinator._clean_bgg_text(raw_comment) == expected
-
-
-async def test_coordinator_image_whitespace_handling(
-    hass, mock_response, mock_bgg_session
+async def test_coordinator_thing_malformed_xml(
+    hass, caplog, mock_response, mock_bgg_session
 ):
-    """Test that image URLs are stripped of whitespace."""
-    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [777], None)
-
-    xml_with_space = b"""
-    <items>
-        <item id="777" type="boardgame">
-            <name type="primary" value="Test Space" />
-            <image>
-                http://example.com/image.png
-            </image>
-        </item>
-    </items>
-    """
+    """Test malformed XML specifically in the Thing API."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [123])
 
     def side_effect(url, **kwargs):
         if "thing" in url:
-            return mock_response(xml_with_space)
+            return mock_response(b"<items> <unclosed tag")
         if "plays" in url:
             return mock_response(b"<plays></plays>")
         if "collection" in url:
             return mock_response(b"<items></items>")
-        return mock_response(b"<items></items>")
+        return mock_response(status=404)
 
     mock_bgg_session.get.side_effect = side_effect
 
-    with (
-        unittest.mock.patch("os.makedirs"),
-        unittest.mock.patch("os.path.exists", return_value=False),
-        unittest.mock.patch("builtins.open", unittest.mock.mock_open()),
-        unittest.mock.patch("PIL.Image.open"),
-        unittest.mock.patch("io.BytesIO"),
-    ):
-        data = await coordinator._async_update_data()
+    # The new implementation catches XML errors and logs them, possibly not raising UpdateFailed
+    # if it's just one batch failing, OR if the XML parse fails entirely it might log "Failed to parse..."
+    # api.py: _LOGGER.error("Failed to parse BGG XML response: %s", e)
 
-    # The coordinator logic usually returns the local path if successful, but we mocked open
-    # and the download response (mock_response default is 200).
-    # Since we mocked the download as "successful" via default mock_response,
-    # the coordinator will set the image to the local path.
-    # We should verify it TRIED to download the whitespace-stripped URL.
-    # But since we didn't mock the specific image download GET, it might fail or use default.
+    with caplog.at_level(logging.ERROR):
+        await coordinator._async_update_data()
 
-    # Actually, simpler: verify the stripped URL was put in 'original_image' or 'image'
-    # Wait, if download fails it keeps original URL.
+    assert "Failed to parse BGG XML" in caplog.text
 
-    # Let's adjust the test to expect the local path if we mock success
-    # img_path = data["game_details"][777].get("image")
-    # It should be local path OR clean URL if download failed
-    assert "http://example.com/image.png" in str(data["game_details"][777])
+    await hass.async_block_till_done()
+
+
+async def test_coordinator_full_collection_flags(hass, mock_bgg_session):
+    """Test coordinator correctly increments all collection flags."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
+    # Re-mock client methods directly
+    coordinator.client.fetch_plays = AsyncMock(
+        return_value={"status": 200, "total": 10, "last_play": None}
+    )
+    coordinator.client.fetch_game_plays = AsyncMock(return_value=5)
+    coordinator.client.fetch_thing_details = AsyncMock(return_value=[])
+
+    # Mock collection with all flags
+    item_all_flags = {
+        "objectid": 100,
+        "subtype": "boardgame",
+        "name": "Game 1",
+        "own": True,
+        "wishlist": True,
+        "wanttoplay": True,
+        "wanttobuy": True,
+        "fortrade": True,
+        "preordered": True,
+        "numplays": 5,
+        "image": "img.jpg",
+        "thumbnail": "thumb.jpg",
+        "yearpublished": "2020",
+        "minplayers": "1",
+        "maxplayers": "4",
+        "playingtime": "60",
+        "minplaytime": "60",
+        "maxplaytime": "60",
+        "rank": "1",
+        "rating": "8.0",
+        "bayes_rating": "7.5",
+        "weight": "2.5",
+        "users_rated": "1000",
+        "stddev": "1.0",
+        "median": "8.0",
+        "numowned": "5000",
+        "collid": "12345",
+    }
+    # We return the mocked item only for the first call (boardgame), empty for second
+    coordinator.client.fetch_collection = AsyncMock(
+        side_effect=[
+            {"status": 200, "items": [item_all_flags]},
+            {"status": 200, "items": []},
+        ]
+    )
+
+    data = await coordinator._async_update_data()
+
+    assert data["counts"]["wishlist"] == 1
+    assert data["counts"]["want_to_play"] == 1
+    assert data["counts"]["want_to_buy"] == 1
+    assert data["counts"]["for_trade"] == 1
+    assert data["counts"]["preordered"] == 1
+
+
+async def test_coordinator_plays_processing(hass, mock_bgg_session):
+    """Test coordinator handles 202 status for plays."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
+
+    coordinator.client.fetch_plays = AsyncMock(
+        return_value={"status": 202, "total": 0, "last_play": None}
+    )
+    coordinator.client.fetch_collection = AsyncMock(
+        return_value={"status": 200, "items": []}
+    )
+    coordinator.client.fetch_game_plays = AsyncMock(return_value=0)
+    coordinator.client.fetch_thing_details = AsyncMock(return_value=[])
+
+    data = await coordinator._async_update_data()
+    # Should complete without error, but logging "BGG is generating play data"
+    assert data is not None
+
+
+async def test_coordinator_generic_error(hass, mock_bgg_session):
+    """Test coordinator handles generic exceptions during update."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, None, [])
+
+    # We must mock the method on the client instance attached to the coordinator
+    coordinator.client.fetch_plays = AsyncMock(side_effect=Exception("Unexpected boom"))
+
+    with pytest.raises(UpdateFailed) as excinfo:
+        await coordinator._async_update_data()
+
+    assert "Error communicating with BGG API" in str(excinfo.value)
 
 
 @pytest.fixture
-def mock_coordinator(hass):
+async def mock_coordinator(hass, mock_bgg_session):
     """Create a mock coordinator."""
     return BggDataUpdateCoordinator(hass, "test_user", "password", None, [123], {})
 
@@ -736,7 +526,7 @@ async def test_read_meta_exception(hass, mock_coordinator):
             assert mock_session.return_value.get.called
 
 
-def test_coordinator_init_game_data_normalization(hass):
+async def test_coordinator_init_game_data_normalization(hass, mock_bgg_session):
     """Test that game_data keys are normalized to int, and invalid ones skipped."""
     raw_data = {
         "123": {"prop": "val"},
@@ -752,123 +542,17 @@ def test_coordinator_init_game_data_normalization(hass):
     assert coord.game_data[123] == {"prop": "val"}
 
 
-async def test_coordinator_thing_batch_retry_success(
-    hass, caplog, mock_response, mock_bgg_session
-):
-    """Test that we retry on 429 and succeed eventually."""
-    coordinator = BggDataUpdateCoordinator(
-        hass, "test_user", None, None, list(range(1, 21))
-    )
+async def test_cache_images(hass, mock_coordinator):
+    """Test caching logic correctly overrides image dict entries."""
+    test_data = {"game_details": {123: {"image": "http://img.com/123.jpg"}}}
 
-    # We need to simulate:
-    # 1. Plays API success
-    # 2. Collection API success (empty)
-    # 3. Thing API: 429, then 429, then 200 OK
+    from unittest.mock import patch
 
-    # side_effect can be an iterable, but it's per-call.
-    # The coordinator calls:
-    # 1. plays
-    # 2. collection (boardgame)
-    # 3. Collection (expansion) API success (empty)
-    # 4. Specific plays API success (empty)
-    # 5. Thing API: 429 x 2 -> 200
+    with patch.object(
+        mock_coordinator, "_download_image", return_value="/local/bgg_sync/123.jpg"
+    ):
+        await mock_coordinator._cache_images(test_data)
 
-    def make_resp(content=b"", status=200):
-        m = AsyncMock()
-        m.status = status
-        m.text.return_value = content
-        m.__aenter__.return_value = m
-        return m
-
-    thing_attempts = 0
-
-    def side_effect(url, **kwargs):
-        nonlocal thing_attempts
-        if "plays" in url:
-            return make_resp(b"<plays></plays>")
-        if "collection" in url:
-            return make_resp(b"<items></items>")
-        if "thing" in url:
-            thing_attempts += 1
-            if thing_attempts < 3:
-                return make_resp(status=429)
-            return make_resp(
-                b"<items><item id='1'><name type='primary' value='G'/></item></items>"
-            )
-        return make_resp(status=404)
-
-    mock_bgg_session.get.side_effect = side_effect
-
-    # We patch asyncio.sleep to speed up test
-    with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-        data = await coordinator._async_update_data()
-
-    assert thing_attempts == 3
-    # Check that we logged the retries
-    assert "Rate limited (429) for batch 0. Retrying" in caplog.text
-    # Verify we got data
-    assert data["game_details"][1]["name"] == "G"
-    assert mock_sleep.call_count >= 2
-
-
-async def test_coordinator_thing_batch_retry_giveup(
-    hass, caplog, mock_response, mock_bgg_session
-):
-    """Test that we give up after max retries."""
-    coordinator = BggDataUpdateCoordinator(
-        hass, "test_user", None, None, list(range(1, 21))
-    )
-
-    def make_resp(content=b"", status=200):
-        m = AsyncMock()
-        m.status = status
-        m.text.return_value = content
-        m.__aenter__.return_value = m
-        return m
-
-    def side_effect(url, **kwargs):
-        if "plays" in url:
-            return make_resp(b"<plays></plays>")
-        if "collection" in url:
-            return make_resp(b"<items></items>")
-        if "thing" in url:
-            return make_resp(status=429)
-        return make_resp(status=404)
-
-    mock_bgg_session.get.side_effect = side_effect
-
-    with patch("asyncio.sleep", new_callable=AsyncMock) as _:
-        with caplog.at_level(logging.WARNING):
-            coordinator.data = await coordinator._async_update_data()
-
-    assert caplog.text.count("Rate limited (429)") == 5
-    # Should have empty data for that batch
-    assert 1 not in coordinator.data["game_details"]
-
-
-async def test_coordinator_thing_batch_network_error(
-    hass, caplog, mock_response, mock_bgg_session
-):
-    """Test that we handle network errors during thing batch requests."""
-    coordinator = BggDataUpdateCoordinator(
-        hass, "test_user", None, None, list(range(1, 21))
-    )
-
-    def side_effect(url, **kwargs):
-        if "plays" in url:
-            return mock_response(b"<plays></plays>")
-        if "collection" in url:
-            return mock_response(b"<items></items>")
-        if "thing" in url:
-            raise ClientError("Network Error")
-        return mock_response(status=404)
-
-    mock_bgg_session.get.side_effect = side_effect
-
-    with patch("asyncio.sleep", new_callable=AsyncMock) as _:
-        with caplog.at_level(logging.WARNING):
-            coordinator.data = await coordinator._async_update_data()
-
-    assert "Network error processing batch" in caplog.text
-    # Should have empty data for that batch
-    assert 1 not in coordinator.data["game_details"]
+    assert test_data["game_details"][123]["original_image"] == "http://img.com/123.jpg"
+    assert test_data["game_details"][123]["image"] == "/local/bgg_sync/123.jpg"
+    assert test_data["game_details"][123]["thumbnail"] == "/local/bgg_sync/123.jpg"

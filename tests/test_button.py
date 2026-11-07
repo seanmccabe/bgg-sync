@@ -1,7 +1,11 @@
 """Tests for BGG Sync button."""
 from unittest.mock import AsyncMock, MagicMock
 import pytest
-from custom_components.bgg_sync.button import BggForceSyncButton, async_setup_entry
+from custom_components.bgg_sync.button import (
+    BggForceSyncButton,
+    BggShelfForceSyncButton,
+    async_setup_entry,
+)
 from custom_components.bgg_sync.const import DOMAIN
 
 
@@ -26,9 +30,11 @@ async def test_button_setup(hass, mock_coordinator):
 
     assert async_add.called
     args = async_add.call_args[0][0]
-    assert len(args) == 1
+    assert len(args) == 2
     assert isinstance(args[0], BggForceSyncButton)
+    assert isinstance(args[1], BggShelfForceSyncButton)
     assert args[0].unique_id == "test_user_force_sync"
+    assert args[1].unique_id == "test_user_shelf_force_sync"
     assert args[0].attribution == "Data provided by BoardGameGeek"
 
 
@@ -43,3 +49,13 @@ async def test_button_press(hass, mock_coordinator):
 
     await button.async_press()
     mock_coordinator.async_request_refresh.assert_called_once()
+
+
+async def test_shelf_button(hass, mock_coordinator):
+    """Test shelf button."""
+    button = BggShelfForceSyncButton(mock_coordinator)
+    assert button.unique_id == "test_user_shelf_force_sync"
+    assert button.device_info["name"] == "test_user's Shelf"
+
+    await button.async_press()
+    assert mock_coordinator.async_request_refresh.call_count == 1

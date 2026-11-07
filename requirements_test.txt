@@ -2,3 +2,6 @@ pytest
 pytest-homeassistant-custom-component
 pytest-asyncio
 requests-mock
+bgg-pi>=0.1.0
+Pillow>=10.0.0
+pytest-cov
