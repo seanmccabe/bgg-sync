@@ -2,7 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.0-beta.3] - 2026-01-12
+## [1.3.1] - 2026-11-07
+
+### Added
+- **Sync OK Diagnostic Sensor:** Added a `Sync OK` diagnostic sensor (`sensor.{username}_sync_ok`) on the User device that reports `True` when the latest BGG sync succeeded and `False` if any API endpoint failed, making it easy to monitor and alert on sync issues.
+
+### Fixed
+- **Cloudflare 403 Responses:** Upgraded to `bgg-pi>=0.1.2` and configured explicit `BGGSync` `User-Agent` identification (`BGGSync/1.3.1 (+https://github.com/seanmccabe/bgg-sync)`) with `Accept: application/xml` headers to prevent Cloudflare `403 Forbidden` responses on BoardGameGeek's XML API (#11, #12).
+- **Unavailable State & Name Preservation on Sync Failure:** Game sensors now keep their real names from the Home Assistant Entity Registry (rather than falling back to `BGG Game <id>`), automatically heal any existing `BGG Game <id>` registry names once BGG responds, and report `Unavailable` instead of a misleading `0` play count when a sync fails.
+- **Resilience During API Outages:** Preserved previously fetched collection, play counts, and game details in `BggDataUpdateCoordinator` when BoardGameGeek API endpoints return non-200 errors (`403`, `500`), and skipped per-game play fetches when the Plays API is unavailable to avoid log spam.
+- **CI / GitHub Actions:** Updated GitHub Actions (`actions/checkout@v7`, `actions/setup-python@v7`) to target Node.js 24 and added Dependabot configuration.
+
+## [1.3.0] - 2026-11-07
 
 ### Changed
 - **Device Separation:** Split entities into two separate devices:

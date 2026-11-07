@@ -3,6 +3,7 @@
 DOMAIN = "bgg_sync"
 BGG_URL = "https://boardgamegeek.com"
 BASE_URL = f"{BGG_URL}/xmlapi2"
+USER_AGENT = "BGGSync/1.3.1 (+https://github.com/seanmccabe/bgg-sync)"
 
 CONF_PLAYERS = "players"
 CONF_BGG_USERNAME = "bgg_username"

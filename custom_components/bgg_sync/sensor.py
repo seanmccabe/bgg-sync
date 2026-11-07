@@ -5,7 +5,8 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -57,7 +58,10 @@ async def async_setup_entry(
         ),
         BggLastSyncSensor(coordinator),
         BggShelfLastSyncSensor(coordinator),
+        BggSyncOkSensor(coordinator),
     ]
+
+    added_game_ids: set[int] = set()
 
     # Create sensors for explicitly tracked games
     # We use coordinator.game_ids which contains the merged list from config data and options
@@ -65,13 +69,32 @@ async def async_setup_entry(
         # Get metadata for this game if available (e.g. custom image, nfc)
         metadata = coordinator.game_data.get(g_id, {})
         entities.append(BggGameSensor(coordinator, g_id, metadata))
+        added_game_ids.add(g_id)
 
     # Add entire collection if enabled
     if entry.options.get(CONF_IMPORT_COLLECTION, False):
         collection = coordinator.data.get("collection", {})
         for g_id in collection:
-            if g_id not in coordinator.game_ids:
+            if g_id not in added_game_ids:
                 entities.append(BggGameSensor(coordinator, g_id, {}))
+                added_game_ids.add(g_id)
+
+        @callback
+        def _async_add_collection_entities() -> None:
+            """Add sensors for any newly discovered collection games."""
+            new_entities = [
+                BggGameSensor(coordinator, g_id, {})
+                for g_id in coordinator.data.get("collection", {})
+                if g_id not in added_game_ids
+            ]
+            for sensor in new_entities:
+                added_game_ids.add(sensor.game_id)
+            if new_entities:
+                async_add_entities(new_entities)
+
+        entry.async_on_unload(
+            coordinator.async_add_listener(_async_add_collection_entities)
+        )
 
     async_add_entities(entities)
 
@@ -206,6 +229,37 @@ class BggShelfLastSyncSensor(BggLastSyncSensor):
         )
 
 
+class BggSyncOkSensor(BggBaseSensor):
+    """Diagnostic sensor indicating whether the last BGG sync succeeded."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: BggDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.username}_sync_ok"
+        self._attr_name = "Sync OK"
+
+    @property
+    def available(self) -> bool:
+        """Always available so sync failures can be monitored."""
+        return True
+
+    @property
+    def native_value(self) -> bool:
+        """Return True if the last sync succeeded without errors."""
+        if not self.coordinator.last_update_success or not self.coordinator.data:
+            return False
+        return bool(self.coordinator.data.get("sync_ok", False))
+
+    @property
+    def icon(self) -> str:
+        """Return icon based on sync status."""
+        if self.native_value:
+            return "mdi:check-circle-outline"
+        return "mdi:alert-circle-outline"
+
+
 class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
     """Sensor for a specific game with rich metadata."""
 
@@ -222,6 +276,19 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         self._attr_unique_id = f"{coordinator.username}_game_{game_id}"
 
         name = coordinator.data.get("game_details", {}).get(game_id, {}).get("name")
+        if not name and isinstance(getattr(coordinator, "hass", None), HomeAssistant):
+            ent_reg = er.async_get(coordinator.hass)
+            entity_id = ent_reg.async_get_entity_id(
+                "sensor", DOMAIN, self._attr_unique_id
+            )
+            reg_entry = ent_reg.async_get(entity_id) if entity_id else None
+            if (
+                reg_entry
+                and reg_entry.original_name
+                and not reg_entry.original_name.startswith("BGG Game ")
+            ):
+                name = reg_entry.original_name
+
         self._attr_name = name or f"BGG Game {game_id}"
 
         self._attr_device_info = DeviceInfo(
@@ -233,15 +300,57 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
             via_device=(DOMAIN, coordinator.username),
         )
 
+    def _sync_registry_name(self) -> None:
+        """Heal entity registry original_name if stuck on fallback BGG Game ID."""
+        details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
+        if not (fetched_name := details.get("name")):
+            return
+        self._attr_name = fetched_name
+        if (
+            not isinstance(getattr(self, "hass", None), HomeAssistant)
+            or not self.entity_id
+        ):
+            return
+        ent_reg = er.async_get(self.hass)
+        reg_entry = ent_reg.async_get(self.entity_id)
+        if reg_entry and (
+            not reg_entry.original_name
+            or reg_entry.original_name.startswith("BGG Game ")
+        ):
+            ent_reg.async_update_entity(self.entity_id, original_name=fetched_name)
+
+    async def async_added_to_hass(self) -> None:
+        """When entity is added to hass."""
+        await super().async_added_to_hass()
+        self._sync_registry_name()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._sync_registry_name()
+        super()._handle_coordinator_update()
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return (
+            super().available
+            and bool(self.coordinator.data.get("sync_ok", True))
+            and self.game_id in self.coordinator.data.get("game_details", {})
+            and self.game_id in self.coordinator.data.get("game_plays", {})
+        )
+
     @property
     def name(self) -> str:
         # Allow dynamic name updates if it wasn't available at init
         details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
-        return details.get("name") or self._attr_name
+        if fetched_name := details.get("name"):
+            self._attr_name = fetched_name
+        return self._attr_name
 
     @property
     def native_value(self) -> int | None:
-        return self.coordinator.data.get("game_plays", {}).get(self.game_id, 0)
+        return self.coordinator.data.get("game_plays", {}).get(self.game_id)
 
     @property
     def icon(self) -> str | None:

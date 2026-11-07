@@ -12,6 +12,7 @@ from custom_components.bgg_sync.const import (
     CONF_BGG_PASSWORD,
     SERVICE_RECORD_PLAY,
     SERVICE_TRACK_GAME,
+    USER_AGENT,
 )
 
 
@@ -77,6 +78,9 @@ async def test_service_record_play(hass, mock_bgg_session):
             blocking=True,
         )
 
+        mock_client_cls.assert_called_once_with(
+            mock_bgg_session, "test_user", "password", user_agent=USER_AGENT
+        )
         assert mock_client_instance.record_play.called
         args = mock_client_instance.record_play.call_args
         assert args[0][0] == 123  # game_id

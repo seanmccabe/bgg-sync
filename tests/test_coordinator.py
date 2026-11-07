@@ -556,3 +556,66 @@ async def test_cache_images(hass, mock_coordinator):
     assert test_data["game_details"][123]["original_image"] == "http://img.com/123.jpg"
     assert test_data["game_details"][123]["image"] == "/local/bgg_sync/123.jpg"
     assert test_data["game_details"][123]["thumbnail"] == "/local/bgg_sync/123.jpg"
+
+
+async def test_coordinator_preserves_data_on_403(hass, mock_bgg_session):
+    """Test coordinator preserves previous data when BGG API returns 403 errors."""
+    coordinator = BggDataUpdateCoordinator(hass, "test_user", None, "token", [13, 999])
+    coordinator.data = {
+        "total_plays": 42,
+        "last_play": {"game": "Catan", "game_id": 13, "date": "2026-01-01"},
+        "total_collection": 1,
+        "game_plays": {13: 10, 999: 7},
+        "collection": {13: {"bgg_id": 13, "name": "Catan"}},
+        "game_details": {
+            13: {"bgg_id": 13, "name": "Catan", "image": "/local/bgg_images/13.jpg"},
+            999: {
+                "bgg_id": 999,
+                "name": "Carcassonne",
+                "image": "/local/bgg_images/999.jpg",
+            },
+        },
+        "counts": {
+            "owned": 1,
+            "owned_boardgames": 1,
+            "owned_expansions": 0,
+            "wishlist": 0,
+            "want_to_play": 0,
+            "want_to_buy": 0,
+            "for_trade": 0,
+            "preordered": 0,
+        },
+    }
+
+    # Case 1: Plays, Collection, and Thing APIs all return 403
+    coordinator.client.fetch_plays = AsyncMock(
+        return_value={"status": 403, "total": 0, "last_play": None}
+    )
+    coordinator.client.fetch_collection = AsyncMock(
+        return_value={"status": 403, "items": []}
+    )
+    coordinator.client.fetch_game_plays = AsyncMock(return_value=0)
+    coordinator.client.fetch_thing_details = AsyncMock(return_value=[])
+
+    data = await coordinator._async_update_data()
+
+    assert data["total_plays"] == 42
+    assert data["last_play"]["game"] == "Catan"
+    assert data["total_collection"] == 1
+    assert 13 in data["collection"]
+    assert data["counts"]["owned"] == 1
+    assert data["game_plays"][13] == 10
+    assert data["game_plays"][999] == 7
+    assert data["game_details"][13]["name"] == "Catan"
+    assert data["game_details"][999]["name"] == "Carcassonne"
+    assert data["sync_ok"] is False
+    assert data["last_sync"] is None
+
+    # Case 2: Collection succeeds (empty), Plays returns 403, fetch_game_plays skipped
+    coordinator.data = data
+    coordinator.client.fetch_collection = AsyncMock(
+        return_value={"status": 200, "items": []}
+    )
+    data2 = await coordinator._async_update_data()
+    assert data2["sync_ok"] is False
+    coordinator.client.fetch_game_plays.assert_not_called()
