@@ -2,7 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.0-beta.3] - 2026-01-12
+## [1.3.1] - 2026-11-07
+
+### Fixed
+- **Cloudflare 403 Responses:** Upgraded to `bgg-pi>=0.1.2` and configured explicit `BGGSync` `User-Agent` identification (`BGGSync/1.3.1 (+https://github.com/seanmccabe/bgg-sync)`) with `Accept: application/xml` headers to prevent Cloudflare `403 Forbidden` responses on BoardGameGeek's XML API (#11, #12).
+- **CI / GitHub Actions:** Updated GitHub Actions (`actions/checkout@v7`, `actions/setup-python@v7`) to target Node.js 24 and added Dependabot configuration.
+
+## [1.3.0] - 2026-11-07
 
 ### Changed
 - **Device Separation:** Split entities into two separate devices:

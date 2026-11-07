@@ -20,6 +20,7 @@ from .const import (
     CONF_MUSIC,
     CONF_CUSTOM_IMAGE,
     CONF_ENABLE_LOGGING,
+    USER_AGENT,
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from bgg_pi import BggClient
@@ -101,7 +102,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 return
 
             session = async_get_clientsession(hass)
-            client = BggClient(session, username, password)
+            client = BggClient(session, username, password, user_agent=USER_AGENT)
             await client.record_play(
                 game_id,
                 call.data.get("date"),
@@ -150,33 +151,27 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 "Found config entry for user: %s", entry.data.get(CONF_BGG_USERNAME)
             )
 
-            # Update Options
+            # Update the config entry's options
             new_options = dict(entry.options)
-            current_data = new_options.get(CONF_GAME_DATA, {}).copy()
+            game_data = dict(new_options.get(CONF_GAME_DATA, {}))
 
-            # Update the game entry
-            metadata = current_data.get(str(bgg_id), {}).copy()
-            # If it was an empty dict from previous legacy import, it might be there
+            str_id = str(bgg_id)
+            current_meta = dict(game_data.get(str_id, {}))
 
-            if nfc:
-                metadata[CONF_NFC_TAG] = nfc
-            if music:
-                metadata[CONF_MUSIC] = music
-            if custom_image:
-                metadata[CONF_CUSTOM_IMAGE] = custom_image
+            if nfc is not None:
+                current_meta[CONF_NFC_TAG] = nfc
+            if music is not None:
+                current_meta[CONF_MUSIC] = music
+            if custom_image is not None:
+                current_meta[CONF_CUSTOM_IMAGE] = custom_image
 
-            current_data[str(bgg_id)] = metadata
-            new_options[CONF_GAME_DATA] = current_data
+            game_data[str_id] = current_meta
+            new_options[CONF_GAME_DATA] = game_data
 
-            _LOGGER.info("Updating entry options with new metadata for %s", bgg_id)
+            _LOGGER.info("Updating options for entry %s", entry.entry_id)
             hass.config_entries.async_update_entry(entry, options=new_options)
 
         hass.services.async_register(DOMAIN, SERVICE_TRACK_GAME, async_track_game)
-
-
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload config entry."""
-    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -185,3 +180,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload config entry."""
+    await hass.config_entries.async_reload(entry.entry_id)

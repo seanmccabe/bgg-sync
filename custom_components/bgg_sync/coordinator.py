@@ -11,7 +11,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from bgg_pi import BggClient
-from .const import IMAGE_CACHE_DIR, CONF_CUSTOM_IMAGE
+from .const import IMAGE_CACHE_DIR, CONF_CUSTOM_IMAGE, USER_AGENT
 import os
 from PIL import Image
 import io
@@ -50,7 +50,9 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     continue
 
         session = async_get_clientsession(hass)
-        self.client = BggClient(session, username, password, api_token)
+        self.client = BggClient(
+            session, username, password, api_token, user_agent=USER_AGENT
+        )
 
     @staticmethod
     def _map_item_to_game(item: dict[str, Any]) -> dict[str, Any]:
