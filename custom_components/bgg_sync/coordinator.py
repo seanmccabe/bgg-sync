@@ -365,9 +365,9 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Apply any user-configured custom_name overrides
             for g_id, meta in self.game_data.items():
-                if (
-                    custom_name := meta.get(CONF_CUSTOM_NAME)
-                ) and g_id in data["game_details"]:
+                if (custom_name := meta.get(CONF_CUSTOM_NAME)) and g_id in data[
+                    "game_details"
+                ]:
                     data["game_details"][g_id]["name"] = custom_name
                     if g_id in data["collection"]:
                         data["collection"][g_id]["name"] = custom_name
