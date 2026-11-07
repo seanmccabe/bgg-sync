@@ -608,11 +608,14 @@ async def test_coordinator_preserves_data_on_403(hass, mock_bgg_session):
     assert data["game_plays"][999] == 7
     assert data["game_details"][13]["name"] == "Catan"
     assert data["game_details"][999]["name"] == "Carcassonne"
+    assert data["sync_ok"] is False
+    assert data["last_sync"] is None
 
-    # Case 2: Collection succeeds (empty), Plays returns 403, fetch_game_plays returns 0
+    # Case 2: Collection succeeds (empty), Plays returns 403, fetch_game_plays skipped
     coordinator.data = data
     coordinator.client.fetch_collection = AsyncMock(
         return_value={"status": 200, "items": []}
     )
     data2 = await coordinator._async_update_data()
-    assert data2["game_plays"][999] == 7
+    assert data2["sync_ok"] is False
+    coordinator.client.fetch_game_plays.assert_not_called()

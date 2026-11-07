@@ -7,6 +7,7 @@ from custom_components.bgg_sync.sensor import (
     BggCollectionCountSensor,
     BggLastSyncSensor,
     BggShelfLastSyncSensor,
+    BggSyncOkSensor,
 )
 from custom_components.bgg_sync.const import (
     CONF_NFC_TAG,
@@ -75,6 +76,24 @@ async def test_sensor_setup(hass, mock_coordinator_with_username):
     assert shelf_last_sync.device_info["name"] == "test_user's Shelf"
     assert shelf_last_sync.native_value == now
 
+    # 1.7 BggSyncOkSensor
+    sync_ok_sensor = BggSyncOkSensor(mock_coordinator_with_username)
+    assert sync_ok_sensor.unique_id == "test_user_sync_ok"
+    assert sync_ok_sensor.name == "Sync OK"
+    assert sync_ok_sensor.available is True
+    assert sync_ok_sensor.entity_category == EntityCategory.DIAGNOSTIC
+    assert sync_ok_sensor.native_value is False
+    assert sync_ok_sensor.icon == "mdi:alert-circle-outline"
+
+    mock_coordinator_with_username.last_update_success = True
+    mock_coordinator_with_username.data["sync_ok"] = True
+    assert sync_ok_sensor.native_value is True
+    assert sync_ok_sensor.icon == "mdi:check-circle-outline"
+
+    mock_coordinator_with_username.last_update_success = False
+    assert sync_ok_sensor.native_value is False
+    mock_coordinator_with_username.last_update_success = True
+
     # 2. BggCollectionSensor
     coll_sensor = BggCollectionSensor(mock_coordinator_with_username)
     assert coll_sensor.state == 50
@@ -103,6 +122,7 @@ async def test_sensor_setup(hass, mock_coordinator_with_username):
         },
     )
     assert game_sensor.state == 5
+    assert game_sensor.available is True
     assert game_sensor.device_info["name"] == "test_user's Shelf"
     assert game_sensor.extra_state_attributes["bgg_id"] == "13"
     assert game_sensor.extra_state_attributes[CONF_NFC_TAG] == "abc"
@@ -326,7 +346,7 @@ async def test_sensor_fallback_to_coordinator_games(hass, mock_coordinator):
 async def test_sensor_registry_recovery_and_name_healing(
     hass, mock_coordinator_with_username
 ):
-    """Test collection sensors recover from Entity Registry and heal fallback names."""
+    """Test tracked sensors recover names, show unavailable on sync failure, and heal names."""
     from homeassistant.helpers import entity_registry as er
     from pytest_homeassistant_custom_component.common import MockConfigEntry
     from custom_components.bgg_sync.sensor import async_setup_entry
@@ -341,13 +361,13 @@ async def test_sensor_registry_recovery_and_name_healing(
     entry.add_to_hass(hass)
 
     ent_reg = er.async_get(hass)
-    # 1. Pre-existing collection sensor with known real name in Entity Registry
+    # 1. Pre-existing tracked sensor with known real name in Entity Registry
     ent_reg.async_get_or_create(
         "sensor",
         DOMAIN,
-        "test_user_game_350000",
+        "test_user_game_822",
         config_entry=entry,
-        original_name="Bear Mountain Camping Adventure",
+        original_name="Carcassonne",
     )
     # 2. Pre-existing tracked sensor stuck on "BGG Game 13" in Entity Registry
     reg_catan = ent_reg.async_get_or_create(
@@ -359,13 +379,15 @@ async def test_sensor_registry_recovery_and_name_healing(
     )
 
     mock_coordinator_with_username.hass = hass
-    mock_coordinator_with_username.game_ids = [13]
+    mock_coordinator_with_username.last_update_success = True
+    mock_coordinator_with_username.game_ids = [13, 822]
     mock_coordinator_with_username.game_data = {}
-    # Simulate startup during 403 outage: collection & game_details are empty
+    # Simulate startup during 403 outage: sync_ok is False, details & plays are empty
     mock_coordinator_with_username.data = {
+        "sync_ok": False,
         "collection": {},
         "game_details": {},
-        "game_plays": {13: 0},
+        "game_plays": {},
     }
 
     listeners = []
@@ -383,11 +405,14 @@ async def test_sensor_registry_recovery_and_name_healing(
     added_list = async_add_entities.call_args[0][0]
     game_sensors = {e.game_id: e for e in added_list if isinstance(e, BggGameSensor)}
 
-    # Both tracked game 13 and registry-recovered collection game 350000 exist
+    # Both tracked games exist and are marked unavailable during sync failure
     assert 13 in game_sensors
-    assert 350000 in game_sensors
-    # Game 350000 recovered its real name from the Entity Registry
-    assert game_sensors[350000].name == "Bear Mountain Camping Adventure"
+    assert 822 in game_sensors
+    assert game_sensors[13].available is False
+    assert game_sensors[822].available is False
+    assert game_sensors[13].native_value is None
+    # Game 822 recovered its real name from the Entity Registry instead of "BGG Game 822"
+    assert game_sensors[822].name == "Carcassonne"
     # Game 13 was stuck on "BGG Game 13" and details are still empty
     assert game_sensors[13].name == "BGG Game 13"
 
@@ -399,15 +424,26 @@ async def test_sensor_registry_recovery_and_name_healing(
     catan_sensor._sync_registry_name()
     assert ent_reg.async_get(reg_catan.entity_id).original_name == "BGG Game 13"
 
-    # Coordinator fetches real game details and discovers collection game 400000
+    # Coordinator succeeds on next poll: fetches real game details, plays, and collection
+    mock_coordinator_with_username.data["sync_ok"] = True
     mock_coordinator_with_username.data["game_details"] = {
         13: {"name": "CATAN"},
+        822: {"name": "Carcassonne"},
         400000: {"name": "New Collection Game"},
+    }
+    mock_coordinator_with_username.data["game_plays"] = {
+        13: 5,
+        822: 0,
+        400000: 2,
     }
     mock_coordinator_with_username.data["collection"] = {
-        350000: {"name": "Bear Mountain Camping Adventure"},
         400000: {"name": "New Collection Game"},
     }
+
+    assert catan_sensor.available is True
+    assert catan_sensor.native_value == 5
+    assert game_sensors[822].available is True
+    assert game_sensors[822].native_value == 0
 
     # Test _sync_registry_name when entity_id is not set yet (early return branch)
     catan_sensor.entity_id = None

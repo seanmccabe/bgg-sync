@@ -233,7 +233,8 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
             # 1. Fetch Plays
             plays_resp = await self.client.fetch_plays()
-            if plays_resp["status"] == 200:
+            plays_ok = plays_resp["status"] == 200
+            if plays_ok:
                 data["total_plays"] = plays_resp["total"]
                 if plays_resp["last_play"]:
                     data["last_play"] = plays_resp["last_play"]
@@ -256,11 +257,10 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
             # 2. Fetch Collection
             all_items = []
-            collection_ok = False
+            collection_ok = True
             for subtype in ["boardgame", "boardgameexpansion"]:
                 coll_resp = await self.client.fetch_collection(subtype)
                 if coll_resp["status"] == 200:
-                    collection_ok = True
                     all_items.extend(coll_resp["items"])
                 elif coll_resp["status"] == 202:
                     _LOGGER.info(
@@ -270,6 +270,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     )
                     raise UpdateFailed("BGG is processing collection, retrying later")
                 else:
+                    collection_ok = False
                     _LOGGER.warning(
                         "Collection API returned status %s for %s (%s)",
                         coll_resp["status"],
@@ -316,16 +317,10 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 data["game_plays"] = dict(prev_plays)
 
             # 3. Fetch Specific Game Plays
-            for game_id in self.game_ids:
-                if game_id not in data["game_plays"]:
-                    count = await self.client.fetch_game_plays(game_id)
-                    if (
-                        count == 0
-                        and plays_resp["status"] != 200
-                        and game_id in prev_plays
-                    ):
-                        data["game_plays"][game_id] = prev_plays[game_id]
-                    else:
+            if plays_ok:
+                for game_id in self.game_ids:
+                    if game_id not in data["game_plays"]:
+                        count = await self.client.fetch_game_plays(game_id)
                         data["game_plays"][game_id] = count
 
             # 4. Fetch Rich Game Details
@@ -352,7 +347,9 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
             # 5. Cache Images Locally
             await self._cache_images(data)
 
-            data["last_sync"] = dt_util.now()
+            sync_ok = plays_ok and collection_ok
+            data["sync_ok"] = sync_ok
+            data["last_sync"] = dt_util.now() if sync_ok else prev.get("last_sync")
             return data
 
         except UpdateFailed:

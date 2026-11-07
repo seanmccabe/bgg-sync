@@ -58,6 +58,7 @@ async def async_setup_entry(
         ),
         BggLastSyncSensor(coordinator),
         BggShelfLastSyncSensor(coordinator),
+        BggSyncOkSensor(coordinator),
     ]
 
     added_game_ids: set[int] = set()
@@ -77,15 +78,6 @@ async def async_setup_entry(
             if g_id not in added_game_ids:
                 entities.append(BggGameSensor(coordinator, g_id, {}))
                 added_game_ids.add(g_id)
-
-        ent_reg = er.async_get(hass)
-        prefix = f"{coordinator.username}_game_"
-        for reg_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
-            if reg_entry.unique_id.startswith(prefix):
-                raw_id = reg_entry.unique_id[len(prefix) :]
-                if raw_id.isdigit() and (g_id := int(raw_id)) not in added_game_ids:
-                    entities.append(BggGameSensor(coordinator, g_id, {}))
-                    added_game_ids.add(g_id)
 
         @callback
         def _async_add_collection_entities() -> None:
@@ -237,6 +229,37 @@ class BggShelfLastSyncSensor(BggLastSyncSensor):
         )
 
 
+class BggSyncOkSensor(BggBaseSensor):
+    """Diagnostic sensor indicating whether the last BGG sync succeeded."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: BggDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.username}_sync_ok"
+        self._attr_name = "Sync OK"
+
+    @property
+    def available(self) -> bool:
+        """Always available so sync failures can be monitored."""
+        return True
+
+    @property
+    def native_value(self) -> bool:
+        """Return True if the last sync succeeded without errors."""
+        if not self.coordinator.last_update_success or not self.coordinator.data:
+            return False
+        return bool(self.coordinator.data.get("sync_ok", False))
+
+    @property
+    def icon(self) -> str:
+        """Return icon based on sync status."""
+        if self.native_value:
+            return "mdi:check-circle-outline"
+        return "mdi:alert-circle-outline"
+
+
 class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
     """Sensor for a specific game with rich metadata."""
 
@@ -308,6 +331,16 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         super()._handle_coordinator_update()
 
     @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return (
+            super().available
+            and bool(self.coordinator.data.get("sync_ok", True))
+            and self.game_id in self.coordinator.data.get("game_details", {})
+            and self.game_id in self.coordinator.data.get("game_plays", {})
+        )
+
+    @property
     def name(self) -> str:
         # Allow dynamic name updates if it wasn't available at init
         details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
@@ -317,7 +350,7 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
 
     @property
     def native_value(self) -> int | None:
-        return self.coordinator.data.get("game_plays", {}).get(self.game_id, 0)
+        return self.coordinator.data.get("game_plays", {}).get(self.game_id)
 
     @property
     def icon(self) -> str | None:
