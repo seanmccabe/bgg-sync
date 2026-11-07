@@ -3,7 +3,7 @@
 DOMAIN = "bgg_sync"
 BGG_URL = "https://boardgamegeek.com"
 BASE_URL = f"{BGG_URL}/xmlapi2"
-USER_AGENT = "BGGSync/1.3.1 (+https://github.com/seanmccabe/bgg-sync)"
+USER_AGENT = "BGGSync/1.4.0 (+https://github.com/seanmccabe/bgg-sync)"
 
 CONF_PLAYERS = "players"
 CONF_BGG_USERNAME = "bgg_username"
@@ -25,6 +25,7 @@ SERVICE_TRACK_GAME = "track_game"
 CONF_NFC_TAG = "nfc_tag"
 CONF_MUSIC = "music"
 CONF_CUSTOM_IMAGE = "custom_image"
+CONF_CUSTOM_NAME = "custom_name"
 CONF_GAME_DATA = "game_data"  # To store the rich metadata dict
 IMAGE_CACHE_DIR = "bgg_images"
 

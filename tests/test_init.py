@@ -155,13 +155,14 @@ async def test_service_track_game(hass, mock_bgg_session):
         )
         assert mock_update.called
 
-        # 2. Tracking with music and image and specific username
+        # 2. Tracking with custom_name, music, image, and specific username
         mock_update.reset_mock()
         await hass.services.async_call(
             DOMAIN,
             SERVICE_TRACK_GAME,
             service_data={
                 "bgg_id": 456,
+                "custom_name": "Localised Game",
                 "music": "spotify:track",
                 "custom_image": "http://img",
                 "username": "test_user",
@@ -171,6 +172,7 @@ async def test_service_track_game(hass, mock_bgg_session):
         assert mock_update.called
         options_passed = mock_update.call_args[1]["options"]
         assert "456" in options_passed["game_data"]
+        assert options_passed["game_data"]["456"]["custom_name"] == "Localised Game"
 
         # 3. Target username NOT found
         with patch("custom_components.bgg_sync._LOGGER.error") as mock_log:

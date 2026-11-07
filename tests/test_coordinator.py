@@ -619,3 +619,107 @@ async def test_coordinator_preserves_data_on_403(hass, mock_bgg_session):
     data2 = await coordinator._async_update_data()
     assert data2["sync_ok"] is False
     coordinator.client.fetch_game_plays.assert_not_called()
+
+
+async def test_coordinator_localised_collection_and_custom_name(hass, mock_bgg_session):
+    """Test localised collection fields are preserved and custom_name overrides."""
+    coordinator = BggDataUpdateCoordinator(
+        hass,
+        "test_user",
+        None,
+        "token",
+        [13, 822, 999],
+        {
+            822: {"custom_name": "Carcassonne Custom"},
+            999: {"custom_name": "Tracked Non-Collection Custom"},
+            777: {"custom_name": "Unfetched Custom"},
+        },
+    )
+    coordinator._cache_images = AsyncMock()
+    coordinator.client.fetch_plays = AsyncMock(
+        return_value={"status": 200, "total": 5, "last_play": None}
+    )
+    coordinator.client.fetch_game_plays = AsyncMock(return_value=1)
+
+    async def mock_fetch_collection(subtype):
+        if subtype == "boardgame":
+            return {
+                "status": 200,
+                "items": [
+                    {
+                        "objectid": 13,
+                        "name": "Osadníci z Katanu",
+                        "image": "http://localised/13.jpg",
+                        "thumbnail": "http://localised/13_t.jpg",
+                        "yearpublished": 2004,
+                        "own": True,
+                        "wishlist": False,
+                        "wanttoplay": False,
+                        "wanttobuy": False,
+                        "fortrade": False,
+                        "preordered": False,
+                        "subtype": "boardgame",
+                        "numplays": 5,
+                    },
+                    {
+                        "objectid": 822,
+                        "name": "Carcassonne Coll",
+                        "image": None,
+                        "thumbnail": None,
+                        "yearpublished": None,
+                        "own": True,
+                        "wishlist": False,
+                        "wanttoplay": False,
+                        "wanttobuy": False,
+                        "fortrade": False,
+                        "preordered": False,
+                        "subtype": "boardgame",
+                        "numplays": 2,
+                    },
+                ],
+            }
+        return {"status": 200, "items": []}
+
+    coordinator.client.fetch_collection = AsyncMock(side_effect=mock_fetch_collection)
+    coordinator.client.fetch_thing_details = AsyncMock(
+        return_value=[
+            {
+                "id": 13,
+                "name": "CATAN",
+                "image": "http://base/13.jpg",
+                "thumbnail": "http://base/13_t.jpg",
+                "yearpublished": 1995,
+                "weight": 2.3,
+            },
+            {
+                "id": 822,
+                "name": "Carcassonne",
+                "image": "http://base/822.jpg",
+                "thumbnail": "http://base/822_t.jpg",
+                "yearpublished": 2000,
+                "weight": 1.9,
+            },
+            {
+                "id": 999,
+                "name": "Base Name 999",
+                "yearpublished": 2020,
+            },
+        ]
+    )
+
+    data = await coordinator._async_update_data()
+
+    # Game 13 preserves localised collection name, image, thumbnail, year + merges weight
+    assert data["game_details"][13]["name"] == "Osadníci z Katanu"
+    assert data["game_details"][13]["image"] == "http://localised/13.jpg"
+    assert data["game_details"][13]["thumbnail"] == "http://localised/13_t.jpg"
+    assert data["game_details"][13]["year"] == 2004
+    assert data["game_details"][13]["weight"] == 2.3
+
+    # Game 822 had None image/year in collection so base details backfill them,
+    # and custom_name overrides name in both game_details and collection
+    assert data["game_details"][822]["image"] == "http://base/822.jpg"
+    assert data["game_details"][822]["year"] == 2000
+    assert data["game_details"][822]["name"] == "Carcassonne Custom"
+    assert data["collection"][822]["name"] == "Carcassonne Custom"
+    assert data["game_details"][999]["name"] == "Tracked Non-Collection Custom"

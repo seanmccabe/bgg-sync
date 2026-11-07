@@ -14,6 +14,7 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 ## Features
 
 *   **Game Tracking**: Option to track specific games (by ID) to get dedicated sensors with rich metadata (Box Art, Rank, Year, weight and more)!
+*   **Localised Editions**: Automatically preserves localised game names, box art, and release years if you have a specific localised version selected in your BGG collection, or lets you set a `custom_name` via `bgg_sync.track_game`.
 *   **Shelf Tracker**: View your full collection as a Home Assistant To-do List.
 *   **Device Handling**: Automatically organises entities into two devices: "**{Username}**" for stats/counts and "**{Username}'s Shelf**" for the physical game collection and lists.
 *   **Play Logging**: Includes an action to log plays to your BGG account.
@@ -112,6 +113,7 @@ Dynamically adds a game to your tracked list without restarting Home Assistant.
 service: bgg_sync.track_game
 data:
   bgg_id: 822
+  custom_name: "Carcassonne (Big Box)"
   nfc_tag: "04-14-98-B2-84-2A-81"
   music: "spotify:playlist:3eFSbK6WDyledAmEvtmb3t"
   custom_image: "/local/boardgames/carcassonne.webp"
@@ -120,6 +122,7 @@ data:
 **Arguments:**
 
 *   `bgg_id` (Required): The BoardGameGeek ID of the game.
+*   `custom_name` (Optional): A custom or localised display name to override the BGG name.
 *   `nfc_tag` (Optional): A clean tag ID to associate with this game (useful for automations).
 *   `music` (Optional): A Spotify URI, URL, or search term for background music.
 *   `custom_image` (Optional): A URL or local path (`/local/...`) to override the default BGG box art.

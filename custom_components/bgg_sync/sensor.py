@@ -21,6 +21,7 @@ from .const import (
     CONF_NFC_TAG,
     CONF_MUSIC,
     CONF_CUSTOM_IMAGE,
+    CONF_CUSTOM_NAME,
     CONF_IMPORT_COLLECTION,
 )
 from .coordinator import BggDataUpdateCoordinator
@@ -76,14 +77,18 @@ async def async_setup_entry(
         collection = coordinator.data.get("collection", {})
         for g_id in collection:
             if g_id not in added_game_ids:
-                entities.append(BggGameSensor(coordinator, g_id, {}))
+                entities.append(
+                    BggGameSensor(
+                        coordinator, g_id, coordinator.game_data.get(g_id, {})
+                    )
+                )
                 added_game_ids.add(g_id)
 
         @callback
         def _async_add_collection_entities() -> None:
             """Add sensors for any newly discovered collection games."""
             new_entities = [
-                BggGameSensor(coordinator, g_id, {})
+                BggGameSensor(coordinator, g_id, coordinator.game_data.get(g_id, {}))
                 for g_id in coordinator.data.get("collection", {})
                 if g_id not in added_game_ids
             ]
@@ -275,7 +280,7 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         self.user_data = user_data
         self._attr_unique_id = f"{coordinator.username}_game_{game_id}"
 
-        name = coordinator.data.get("game_details", {}).get(game_id, {}).get("name")
+        name = self._resolve_fetched_name()
         if not name and isinstance(getattr(coordinator, "hass", None), HomeAssistant):
             ent_reg = er.async_get(coordinator.hass)
             entity_id = ent_reg.async_get_entity_id(
@@ -300,10 +305,16 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
             via_device=(DOMAIN, coordinator.username),
         )
 
-    def _sync_registry_name(self) -> None:
-        """Heal entity registry original_name if stuck on fallback BGG Game ID."""
+    def _resolve_fetched_name(self) -> str | None:
+        """Resolve custom name override or BGG game name."""
+        if custom_name := self.user_data.get(CONF_CUSTOM_NAME):
+            return custom_name
         details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
-        if not (fetched_name := details.get("name")):
+        return details.get("name")
+
+    def _sync_registry_name(self) -> None:
+        """Sync entity registry original_name with resolved game name."""
+        if not (fetched_name := self._resolve_fetched_name()):
             return
         self._attr_name = fetched_name
         if (
@@ -313,10 +324,7 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
             return
         ent_reg = er.async_get(self.hass)
         reg_entry = ent_reg.async_get(self.entity_id)
-        if reg_entry and (
-            not reg_entry.original_name
-            or reg_entry.original_name.startswith("BGG Game ")
-        ):
+        if reg_entry and reg_entry.original_name != fetched_name:
             ent_reg.async_update_entity(self.entity_id, original_name=fetched_name)
 
     async def async_added_to_hass(self) -> None:
@@ -343,8 +351,7 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
     @property
     def name(self) -> str:
         # Allow dynamic name updates if it wasn't available at init
-        details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
-        if fetched_name := details.get("name"):
+        if fetched_name := self._resolve_fetched_name():
             self._attr_name = fetched_name
         return self._attr_name
 
