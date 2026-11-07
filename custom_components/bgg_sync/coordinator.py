@@ -11,7 +11,11 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from bgg_pi import BggClient
-from .const import IMAGE_CACHE_DIR, CONF_CUSTOM_IMAGE, USER_AGENT
+from .const import (
+    IMAGE_CACHE_DIR,
+    CONF_CUSTOM_IMAGE,
+    USER_AGENT,
+)
 import os
 from PIL import Image
 import io
@@ -66,16 +70,20 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
             "sub_type": item.get("type") or item.get("subtype"),
             "min_players": item.get("minplayers"),
             "max_players": item.get("maxplayers"),
+            "best_players": item.get("best_players"),
+            "recommended_players": item.get("recommended_players"),
+            "min_age": item.get("minage"),
             "playing_time": item.get("playingtime"),
             "min_playtime": item.get("minplaytime"),
             "max_playtime": item.get("maxplaytime"),
             "rank": item.get("rank"),
             "rating": item.get("rating"),
             "bayes_rating": item.get("bayes_rating"),
+            "user_rating": item.get("user_rating"),
             "weight": item.get("weight"),
             "users_rated": item.get("users_rated"),
-            "stddev": item.get("stddev"),
-            "median": item.get("median"),
+            "categories": item.get("categories"),
+            "mechanics": item.get("mechanics"),
             "owned_by": item.get("numowned") or item.get("owned"),
             "coll_id": item.get("collid"),
         }
@@ -214,6 +222,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 "total_plays": prev.get("total_plays", 0),
                 "last_play": dict(prev.get("last_play") or {}),
                 "total_collection": prev.get("total_collection", 0),
+                "h_index": prev.get("h_index", 0),
                 "game_plays": {},
                 "collection": {},
                 "game_details": {
@@ -223,6 +232,8 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     "owned": 0,
                     "owned_boardgames": 0,
                     "owned_expansions": 0,
+                    "unplayed": 0,
+                    "prev_owned": 0,
                     "wishlist": 0,
                     "want_to_play": 0,
                     "want_to_buy": 0,
@@ -282,14 +293,20 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                 for item in all_items:
                     g_id = item["objectid"]
                     subtype = item["subtype"]
+                    game_obj = self._map_item_to_game(item)
+                    plays_count = int(game_obj["numplays"])
 
                     if item["own"]:
                         data["counts"]["owned"] += 1
                         if subtype == "boardgame":
                             data["counts"]["owned_boardgames"] += 1
+                            if plays_count == 0:
+                                data["counts"]["unplayed"] += 1
                         elif subtype == "boardgameexpansion":
                             data["counts"]["owned_expansions"] += 1
 
+                    if item.get("prevowned"):
+                        data["counts"]["prev_owned"] += 1
                     if item["wishlist"]:
                         data["counts"]["wishlist"] += 1
                     if item["wanttoplay"]:
@@ -301,12 +318,10 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     if item["preordered"]:
                         data["counts"]["preordered"] += 1
 
-                    game_obj = self._map_item_to_game(item)
-
                     data["game_details"][g_id] = game_obj
                     if item["own"]:
                         data["collection"][g_id] = game_obj
-                    data["game_plays"][g_id] = int(game_obj["numplays"])
+                    data["game_plays"][g_id] = plays_count
 
                 data["total_collection"] = data["counts"]["owned"]
             elif prev:
@@ -322,6 +337,14 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     if game_id not in data["game_plays"]:
                         count = await self.client.fetch_game_plays(game_id)
                         data["game_plays"][game_id] = count
+
+            if collection_ok or plays_ok:
+                play_counts = sorted(data["game_plays"].values(), reverse=True)
+                data["h_index"] = sum(
+                    1
+                    for idx, count in enumerate(play_counts, start=1)
+                    if count >= idx
+                )
 
             # 4. Fetch Rich Game Details
             all_ids = set(self.game_ids)

@@ -39,11 +39,18 @@ async def async_setup_entry(
     entities = [
         BggPlaysSensor(coordinator),
         BggCollectionSensor(coordinator),
+        BggHIndexSensor(coordinator),
         BggCollectionCountSensor(
             coordinator, "owned_boardgames", "Games Owned", "mdi:checkerboard"
         ),
         BggCollectionCountSensor(
             coordinator, "owned_expansions", "Expansions Owned", "mdi:puzzle"
+        ),
+        BggCollectionCountSensor(
+            coordinator, "unplayed", "Unplayed Games", "mdi:bookshelf"
+        ),
+        BggCollectionCountSensor(
+            coordinator, "prev_owned", "Previously Owned", "mdi:history"
         ),
         BggCollectionCountSensor(coordinator, "wishlist", "Wishlist", "mdi:gift"),
         BggCollectionCountSensor(
@@ -176,6 +183,22 @@ class BggCollectionSensor(BggBaseSensor):
         )
 
 
+class BggHIndexSensor(BggBaseSensor):
+    """Sensor for user's BGG H-Index."""
+
+    _attr_icon = "mdi:chart-line"
+
+    def __init__(self, coordinator: BggDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.username}_h_index"
+        self._attr_name = "H-Index"
+
+    @property
+    def native_value(self) -> int:
+        return self.coordinator.data.get("h_index", 0)
+
+
 class BggCollectionCountSensor(BggBaseSensor):
     """Sensor for other BGG collection counts (Wishlist, Want to Play, etc)."""
 
@@ -275,7 +298,8 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         self.user_data = user_data
         self._attr_unique_id = f"{coordinator.username}_game_{game_id}"
 
-        name = coordinator.data.get("game_details", {}).get(game_id, {}).get("name")
+        details = coordinator.data.get("game_details", {}).get(game_id, {})
+        name = details.get("name")
         if not name and isinstance(getattr(coordinator, "hass", None), HomeAssistant):
             ent_reg = er.async_get(coordinator.hass)
             entity_id = ent_reg.async_get_entity_id(
@@ -301,9 +325,10 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
         )
 
     def _sync_registry_name(self) -> None:
-        """Heal entity registry original_name if stuck on fallback BGG Game ID."""
+        """Heal entity registry original_name if it was stuck on placeholder."""
         details = self.coordinator.data.get("game_details", {}).get(self.game_id, {})
-        if not (fetched_name := details.get("name")):
+        fetched_name = details.get("name")
+        if not fetched_name:
             return
         self._attr_name = fetched_name
         if (
@@ -313,9 +338,10 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
             return
         ent_reg = er.async_get(self.hass)
         reg_entry = ent_reg.async_get(self.entity_id)
-        if reg_entry and (
-            not reg_entry.original_name
-            or reg_entry.original_name.startswith("BGG Game ")
+        if (
+            reg_entry
+            and reg_entry.original_name
+            and reg_entry.original_name.startswith("BGG Game ")
         ):
             ent_reg.async_update_entity(self.entity_id, original_name=fetched_name)
 
@@ -384,15 +410,19 @@ class BggGameSensor(CoordinatorEntity[BggDataUpdateCoordinator], SensorEntity):
             "max_playtime": details.get("max_playtime"),
             "rating": details.get("rating"),
             "bayes_rating": details.get("bayes_rating"),
+            "user_rating": details.get("user_rating"),
             "weight": details.get("weight"),
             "rank": details.get("rank"),
             "min_players": details.get("min_players"),
             "max_players": details.get("max_players"),
+            "best_players": details.get("best_players"),
+            "recommended_players": details.get("recommended_players"),
+            "min_age": details.get("min_age"),
+            "categories": details.get("categories"),
+            "mechanics": details.get("mechanics"),
             "users_rated": details.get("users_rated"),
             "owned_by": details.get("owned_by"),
             "sub_type": details.get("sub_type"),
-            "stddev": details.get("stddev"),
-            "median": details.get("median"),
         }
 
         # Only add coll_id if it exists (it won't for non-collection tracked games)

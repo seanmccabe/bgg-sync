@@ -18,7 +18,7 @@ BoardGameGeek (BGG) integration for Home Assistant. A robust custom component fo
 *   **Device Handling**: Automatically organises entities into two devices: "**{Username}**" for stats/counts and "**{Username}'s Shelf**" for the physical game collection and lists.
 *   **Play Logging**: Includes an action to log plays to your BGG account.
 *   **Multi-User**: Supports tracking multiple BGG accounts.
-*   **Wishlist Monitoring**: Dedicated sensors to track the size of your collection, Owned, Want-to-own, Wishlist and more!
+*   **Wishlist & Geek Stats Monitoring**: Dedicated sensors to track your H-Index, Unplayed Games (Shelf of Shame), Owned, Previously Owned, Want-to-own, Wishlist and more!
 *   **Custom Attributes**: Add custom attributes including `nfc_tag` and `music` to your sensors to track additional information about your games and create amazing automations.
 *   **Async BGG Client (`bgg-pi`)**: Powered by [`bgg-pi`](https://github.com/seanmccabe/bgg-pi), a dedicated, fully asynchronous Python client for the BoardGameGeek XML API2.
 *   **Authentication Support**: Supports BGG's API Token requirement for data fetching.
@@ -73,8 +73,10 @@ The integration creates the following entities across two devices:
     *   `sensor.{username}_plays`: Total number of plays recorded.
         *   *Attributes*: `game`, `bgg_id`, `date`, `comment`, `expansions`, `winners`, `players`, `image` (cached box art of the last played game).
     *   `sensor.{username}_collection`: Total number of owned games in your collection.
+    *   `sensor.{username}_h_index`: Your BGG H-Index (number of games $H$ that you have played at least $H$ times each).
     *   `sensor.{username}_{list_type}`: Counts for various collection lists:
         *   `games_owned` (`owned_boardgames`), `expansions_owned` (`owned_expansions`)
+        *   `unplayed_games` (`unplayed`), `previously_owned` (`prev_owned`)
         *   `wishlist`, `want_to_play`, `want_to_buy`, `for_trade`, `preordered`
     *   `sensor.{username}_sync_ok` *(Diagnostic)*: Reports `True` when the latest BGG sync succeeded and `False` if an error occurred.
     *   `sensor.{username}_last_sync` *(Diagnostic)*: Timestamp of the last successful sync.
@@ -85,9 +87,10 @@ The integration creates the following entities across two devices:
     *   **Entity Picture**: Locally cached game box art from BGG (or your custom override).
     *   **Attributes**:
         *   `bgg_id`, `bgg_url`, `image_url`
-        *   `rank`, `year`, `weight`, `rating`, `bayes_rating`, `stddev`, `median`
-        *   `min_players`, `max_players`
+        *   `rank`, `year`, `weight`, `rating`, `bayes_rating`, `user_rating`
+        *   `min_players`, `max_players`, `best_players`, `recommended_players`, `min_age`
         *   `playing_time`, `min_playtime`, `max_playtime`
+        *   `categories`, `mechanics`
         *   `users_rated`, `owned_by`, `sub_type` (boardgame/expansion)
         *   `coll_id` (collection ID if owned)
         *   `nfc_tag` (custom), `music` (custom)
@@ -199,7 +202,7 @@ logger:
 
 The following features are planned for upcoming releases:
 *   **"Hotness" Sensor**: Track the top trending games on BoardGameGeek.
-*   **User Stats**: Advanced user metrics including H-Index and Trade Rating.
+*   **User Stats**: Advanced user metrics including Trade Rating.
 
 ---
 

@@ -36,6 +36,8 @@ async def test_coordinator_data_update(
     coordinator.data = await coordinator._async_update_data()
 
     assert coordinator.data["counts"]["owned_boardgames"] > 0
+    assert coordinator.data["counts"]["unplayed"] >= 1
+    assert coordinator.data["h_index"] >= 1
     assert coordinator.data["total_plays"] > 0
     game = coordinator.data["game_details"][822]
     assert game["name"] == "Carcassonne"
@@ -315,6 +317,7 @@ async def test_coordinator_full_collection_flags(hass, mock_bgg_session):
         "subtype": "boardgame",
         "name": "Game 1",
         "own": True,
+        "prevowned": True,
         "wishlist": True,
         "wanttoplay": True,
         "wanttobuy": True,
@@ -326,16 +329,20 @@ async def test_coordinator_full_collection_flags(hass, mock_bgg_session):
         "yearpublished": "2020",
         "minplayers": "1",
         "maxplayers": "4",
+        "best_players": "Best with 3 players",
+        "recommended_players": "Recommended with 2–4 players",
+        "minage": "10",
         "playingtime": "60",
         "minplaytime": "60",
         "maxplaytime": "60",
         "rank": "1",
         "rating": "8.0",
         "bayes_rating": "7.5",
+        "user_rating": "9.0",
         "weight": "2.5",
         "users_rated": "1000",
-        "stddev": "1.0",
-        "median": "8.0",
+        "categories": ["Medieval"],
+        "mechanics": ["Tile Placement"],
         "numowned": "5000",
         "collid": "12345",
     }
@@ -349,11 +356,22 @@ async def test_coordinator_full_collection_flags(hass, mock_bgg_session):
 
     data = await coordinator._async_update_data()
 
+    assert data["counts"]["prev_owned"] == 1
     assert data["counts"]["wishlist"] == 1
     assert data["counts"]["want_to_play"] == 1
     assert data["counts"]["want_to_buy"] == 1
     assert data["counts"]["for_trade"] == 1
     assert data["counts"]["preordered"] == 1
+    assert data["h_index"] == 1
+    assert data["game_details"][100]["best_players"] == "Best with 3 players"
+    assert (
+        data["game_details"][100]["recommended_players"]
+        == "Recommended with 2–4 players"
+    )
+    assert data["game_details"][100]["min_age"] == "10"
+    assert data["game_details"][100]["user_rating"] == "9.0"
+    assert data["game_details"][100]["categories"] == ["Medieval"]
+    assert data["game_details"][100]["mechanics"] == ["Tile Placement"]
 
 
 async def test_coordinator_plays_processing(hass, mock_bgg_session):
@@ -565,6 +583,7 @@ async def test_coordinator_preserves_data_on_403(hass, mock_bgg_session):
         "total_plays": 42,
         "last_play": {"game": "Catan", "game_id": 13, "date": "2026-01-01"},
         "total_collection": 1,
+        "h_index": 2,
         "game_plays": {13: 10, 999: 7},
         "collection": {13: {"bgg_id": 13, "name": "Catan"}},
         "game_details": {
@@ -579,6 +598,8 @@ async def test_coordinator_preserves_data_on_403(hass, mock_bgg_session):
             "owned": 1,
             "owned_boardgames": 1,
             "owned_expansions": 0,
+            "unplayed": 0,
+            "prev_owned": 0,
             "wishlist": 0,
             "want_to_play": 0,
             "want_to_buy": 0,
@@ -602,6 +623,7 @@ async def test_coordinator_preserves_data_on_403(hass, mock_bgg_session):
     assert data["total_plays"] == 42
     assert data["last_play"]["game"] == "Catan"
     assert data["total_collection"] == 1
+    assert data["h_index"] == 2
     assert 13 in data["collection"]
     assert data["counts"]["owned"] == 1
     assert data["game_plays"][13] == 10

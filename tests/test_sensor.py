@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 from custom_components.bgg_sync.sensor import (
     BggPlaysSensor,
     BggCollectionSensor,
+    BggHIndexSensor,
     BggGameSensor,
     BggCollectionCountSensor,
     BggLastSyncSensor,
@@ -32,14 +33,27 @@ async def test_sensor_setup(hass, mock_coordinator_with_username):
         "total_plays": 100,
         "last_play": {"game": "Catan", "date": "2023-01-01", "game_id": 13},
         "total_collection": 50,
+        "h_index": 7,
         "counts": {
             "owned": 50,
             "owned_boardgames": 40,
             "owned_expansions": 10,
+            "unplayed": 5,
+            "prev_owned": 3,
         },
         # Important: game_details must be present for BggGameSensor
         "game_details": {
-            13: {"name": "Catan", "image": "http://image.com", "coll_id": "999"}
+            13: {
+                "name": "Catan",
+                "image": "http://image.com",
+                "coll_id": "999",
+                "best_players": "Best with 4 players",
+                "recommended_players": "Recommended with 3–4 players",
+                "min_age": "10",
+                "user_rating": "8.5",
+                "categories": ["Negotiation"],
+                "mechanics": ["Trading"],
+            }
         },
         "game_plays": {13: 5},
     }
@@ -99,6 +113,13 @@ async def test_sensor_setup(hass, mock_coordinator_with_username):
     assert coll_sensor.state == 50
     assert coll_sensor.device_info["name"] == "test_user"
 
+    # 2.5 BggHIndexSensor
+    h_index_sensor = BggHIndexSensor(mock_coordinator_with_username)
+    assert h_index_sensor.unique_id == "test_user_h_index"
+    assert h_index_sensor.name == "H-Index"
+    assert h_index_sensor.icon == "mdi:chart-line"
+    assert h_index_sensor.native_value == 7
+
     # 3. BggCollectionCountSensor (Counts)
     count_sensor = BggCollectionCountSensor(
         mock_coordinator_with_username,
@@ -128,6 +149,17 @@ async def test_sensor_setup(hass, mock_coordinator_with_username):
     assert game_sensor.extra_state_attributes[CONF_NFC_TAG] == "abc"
     assert game_sensor.extra_state_attributes[CONF_MUSIC] == "uri"
     assert game_sensor.extra_state_attributes["coll_id"] == "999"
+    assert (
+        game_sensor.extra_state_attributes["best_players"] == "Best with 4 players"
+    )
+    assert (
+        game_sensor.extra_state_attributes["recommended_players"]
+        == "Recommended with 3–4 players"
+    )
+    assert game_sensor.extra_state_attributes["min_age"] == "10"
+    assert game_sensor.extra_state_attributes["user_rating"] == "8.5"
+    assert game_sensor.extra_state_attributes["categories"] == ["Negotiation"]
+    assert game_sensor.extra_state_attributes["mechanics"] == ["Trading"]
     assert game_sensor.entity_picture == "http://custom.com"
     # When picture is present, icon should be None
     assert game_sensor.icon is None
