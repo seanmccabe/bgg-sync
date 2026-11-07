@@ -60,7 +60,7 @@ record_play:
 
 track_game:
   name: Track Game
-  description: Add a game to tracking or update its metadata (NFC, Music, Image)
+  description: Add a game to tracking or update its metadata (Name, NFC, Music, Image)
   fields:
     bgg_id:
       description: The BGG ID of the game
@@ -69,6 +69,11 @@ track_game:
       selector:
         number:
           mode: box
+    custom_name:
+      description: Custom or localised display name for the game
+      example: "Osadnicy z Catanu"
+      selector:
+        text:
     nfc_tag:
       description: NFC Tag ID to associate with this game
       example: "04:6B:1A:..."

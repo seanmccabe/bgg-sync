@@ -201,6 +201,7 @@ async def test_sensor_import_collection_option(hass, mock_coordinator):
     entry.options = {CONF_IMPORT_COLLECTION: True, CONF_GAME_DATA: {"100": {}}}
     entry.entry_id = "test"
 
+    mock_coordinator.game_data = {}
     mock_coordinator.data = {
         # Collection has 100 (explicit) and 200 (implicit)
         "collection": {100: {}, 200: {}},
@@ -460,9 +461,12 @@ async def test_sensor_registry_recovery_and_name_healing(
     assert ent_reg.async_get(reg_catan.entity_id).original_name == "CATAN"
 
     # Trigger dynamic collection listener to add game 400000
+    mock_coordinator_with_username.game_data = {
+        400000: {"custom_name": "Custom Collection Name"}
+    }
     async_add_entities.reset_mock()
     listeners[0]()
     new_added = async_add_entities.call_args[0][0]
     assert len(new_added) == 1
     assert new_added[0].game_id == 400000
-    assert new_added[0].name == "New Collection Game"
+    assert new_added[0].name == "Custom Collection Name"

@@ -79,6 +79,10 @@
           "name": "Custom Image",
           "description": "Custom image URL for the sensor"
         },
+        "custom_name": {
+          "name": "Custom Name",
+          "description": "Custom or localised display name for the game"
+        },
         "music": {
           "name": "Music",
           "description": "Spotify (or other service) URI or URL to play when scanned"

@@ -11,7 +11,12 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from bgg_pi import BggClient
-from .const import IMAGE_CACHE_DIR, CONF_CUSTOM_IMAGE, USER_AGENT
+from .const import (
+    IMAGE_CACHE_DIR,
+    CONF_CUSTOM_IMAGE,
+    CONF_CUSTOM_NAME,
+    USER_AGENT,
+)
 import os
 from PIL import Image
 import io
@@ -278,6 +283,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                         subtype,
                     )
 
+            collection_game_ids: set[int] = set()
             if collection_ok:
                 for item in all_items:
                     g_id = item["objectid"]
@@ -304,6 +310,7 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     game_obj = self._map_item_to_game(item)
 
                     data["game_details"][g_id] = game_obj
+                    collection_game_ids.add(g_id)
                     if item["own"]:
                         data["collection"][g_id] = game_obj
                     data["game_plays"][g_id] = int(game_obj["numplays"])
@@ -339,10 +346,31 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
                     existing = data["game_details"].get(g_id, {})
 
-                    updates = {k: v for k, v in new_data.items() if v is not None}
+                    if g_id in collection_game_ids:
+                        # Preserve localised/version-specific fields from the collection
+                        updates = {
+                            k: v
+                            for k, v in new_data.items()
+                            if v is not None
+                            and (
+                                k not in ("name", "image", "thumbnail", "year")
+                                or not existing.get(k)
+                            )
+                        }
+                    else:
+                        updates = {k: v for k, v in new_data.items() if v is not None}
                     existing.update(updates)
 
                     data["game_details"][g_id] = existing
+
+            # Apply any user-configured custom_name overrides
+            for g_id, meta in self.game_data.items():
+                if (
+                    custom_name := meta.get(CONF_CUSTOM_NAME)
+                ) and g_id in data["game_details"]:
+                    data["game_details"][g_id]["name"] = custom_name
+                    if g_id in data["collection"]:
+                        data["collection"][g_id]["name"] = custom_name
 
             # 5. Cache Images Locally
             await self._cache_images(data)

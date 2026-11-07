@@ -19,6 +19,7 @@ from .const import (
     CONF_NFC_TAG,
     CONF_MUSIC,
     CONF_CUSTOM_IMAGE,
+    CONF_CUSTOM_NAME,
     CONF_ENABLE_LOGGING,
     USER_AGENT,
 )
@@ -124,6 +125,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             nfc = call.data.get("nfc_tag")
             music = call.data.get("music") or call.data.get("search_spotify")
             custom_image = call.data.get("custom_image")
+            custom_name = call.data.get("custom_name")
 
             _LOGGER.info(
                 "Tracking request for ID %s | NFC: %s | Music: %s", bgg_id, nfc, music
@@ -164,6 +166,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 current_meta[CONF_MUSIC] = music
             if custom_image is not None:
                 current_meta[CONF_CUSTOM_IMAGE] = custom_image
+            if custom_name is not None:
+                current_meta[CONF_CUSTOM_NAME] = custom_name
 
             game_data[str_id] = current_meta
             new_options[CONF_GAME_DATA] = game_data
