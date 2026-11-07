@@ -96,6 +96,10 @@ The integration creates the following entities across two devices:
     *   `sensor.{username}_s_shelf_last_sync` *(Diagnostic)*: Timestamp of the last successful sync.
     *   `button.{username}_s_shelf_force_sync`: Manually triggers an immediate BGG sync.
 
+![Shelf Device Screenshot](images/shelf.jpeg)
+
+![Shelf To-do List Screenshot](images/todo_list_collection.jpeg)
+
 ## Services
 
 ### `bgg_sync.track_game`
