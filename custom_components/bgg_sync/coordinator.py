@@ -197,7 +197,6 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                     data["game_details"][g_id]["thumbnail"] = local_path
 
         return
-        return
 
     async def _async_update_data(self):
         """Fetch data from BGG."""
@@ -209,13 +208,17 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
             await self.client.login()
 
         try:
+            prev = self.data or {}
+            prev_plays = prev.get("game_plays", {})
             data = {
-                "total_plays": 0,
-                "last_play": {},
-                "total_collection": 0,
+                "total_plays": prev.get("total_plays", 0),
+                "last_play": dict(prev.get("last_play") or {}),
+                "total_collection": prev.get("total_collection", 0),
                 "game_plays": {},
                 "collection": {},
-                "game_details": {},
+                "game_details": {
+                    k: dict(v) for k, v in prev.get("game_details", {}).items()
+                },
                 "counts": {
                     "owned": 0,
                     "owned_boardgames": 0,
@@ -253,9 +256,11 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
 
             # 2. Fetch Collection
             all_items = []
+            collection_ok = False
             for subtype in ["boardgame", "boardgameexpansion"]:
                 coll_resp = await self.client.fetch_collection(subtype)
                 if coll_resp["status"] == 200:
+                    collection_ok = True
                     all_items.extend(coll_resp["items"])
                 elif coll_resp["status"] == 202:
                     _LOGGER.info(
@@ -272,42 +277,56 @@ class BggDataUpdateCoordinator(DataUpdateCoordinator):
                         subtype,
                     )
 
-            for item in all_items:
-                g_id = item["objectid"]
-                subtype = item["subtype"]
+            if collection_ok:
+                for item in all_items:
+                    g_id = item["objectid"]
+                    subtype = item["subtype"]
 
-                if item["own"]:
-                    data["counts"]["owned"] += 1
-                    if subtype == "boardgame":
-                        data["counts"]["owned_boardgames"] += 1
-                    elif subtype == "boardgameexpansion":
-                        data["counts"]["owned_expansions"] += 1
+                    if item["own"]:
+                        data["counts"]["owned"] += 1
+                        if subtype == "boardgame":
+                            data["counts"]["owned_boardgames"] += 1
+                        elif subtype == "boardgameexpansion":
+                            data["counts"]["owned_expansions"] += 1
 
-                if item["wishlist"]:
-                    data["counts"]["wishlist"] += 1
-                if item["wanttoplay"]:
-                    data["counts"]["want_to_play"] += 1
-                if item["wanttobuy"]:
-                    data["counts"]["want_to_buy"] += 1
-                if item["fortrade"]:
-                    data["counts"]["for_trade"] += 1
-                if item["preordered"]:
-                    data["counts"]["preordered"] += 1
+                    if item["wishlist"]:
+                        data["counts"]["wishlist"] += 1
+                    if item["wanttoplay"]:
+                        data["counts"]["want_to_play"] += 1
+                    if item["wanttobuy"]:
+                        data["counts"]["want_to_buy"] += 1
+                    if item["fortrade"]:
+                        data["counts"]["for_trade"] += 1
+                    if item["preordered"]:
+                        data["counts"]["preordered"] += 1
 
-                game_obj = self._map_item_to_game(item)
+                    game_obj = self._map_item_to_game(item)
 
-                data["game_details"][g_id] = game_obj
-                if item["own"]:
-                    data["collection"][g_id] = game_obj
-                data["game_plays"][g_id] = int(game_obj["numplays"])
+                    data["game_details"][g_id] = game_obj
+                    if item["own"]:
+                        data["collection"][g_id] = game_obj
+                    data["game_plays"][g_id] = int(game_obj["numplays"])
 
-            data["total_collection"] = data["counts"]["owned"]
+                data["total_collection"] = data["counts"]["owned"]
+            elif prev:
+                data["collection"] = {
+                    k: dict(v) for k, v in prev.get("collection", {}).items()
+                }
+                data["counts"] = dict(prev.get("counts", data["counts"]))
+                data["game_plays"] = dict(prev_plays)
 
             # 3. Fetch Specific Game Plays
             for game_id in self.game_ids:
                 if game_id not in data["game_plays"]:
                     count = await self.client.fetch_game_plays(game_id)
-                    data["game_plays"][game_id] = count
+                    if (
+                        count == 0
+                        and plays_resp["status"] != 200
+                        and game_id in prev_plays
+                    ):
+                        data["game_plays"][game_id] = prev_plays[game_id]
+                    else:
+                        data["game_plays"][game_id] = count
 
             # 4. Fetch Rich Game Details
             all_ids = set(self.game_ids)

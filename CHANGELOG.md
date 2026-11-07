@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **Cloudflare 403 Responses:** Upgraded to `bgg-pi>=0.1.2` and configured explicit `BGGSync` `User-Agent` identification (`BGGSync/1.3.1 (+https://github.com/seanmccabe/bgg-sync)`) with `Accept: application/xml` headers to prevent Cloudflare `403 Forbidden` responses on BoardGameGeek's XML API (#11, #12).
+- **Resilience During API Outages:** Preserved previously fetched collection, play counts, and game details in `BggDataUpdateCoordinator` when BoardGameGeek API endpoints return non-200 errors (`403`, `500`), preventing temporary API failures from zeroing out stats or wiping game metadata.
+- **Collection Sensor Recovery & Self-Healing Game Names:** Restored collection-imported game sensors from the Home Assistant Entity Registry on startup during API outages (preventing `Unavailable` entities), added dynamic entity creation when collection games populate on subsequent polls, and added automatic self-healing for sensors whose Entity Registry names fell back to `BGG Game <id>`.
 - **CI / GitHub Actions:** Updated GitHub Actions (`actions/checkout@v7`, `actions/setup-python@v7`) to target Node.js 24 and added Dependabot configuration.
 
 ## [1.3.0] - 2026-11-07

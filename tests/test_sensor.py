@@ -321,3 +321,113 @@ async def test_sensor_fallback_to_coordinator_games(hass, mock_coordinator):
     assert sensor.user_data["custom_image"] == "http://custom"
     assert sensor.user_data["nfc_tag"] == "test_nfc"
     assert sensor.user_data["music"] == "spotify:track:123"
+
+
+async def test_sensor_registry_recovery_and_name_healing(
+    hass, mock_coordinator_with_username
+):
+    """Test collection sensors recover from Entity Registry and heal fallback names."""
+    from homeassistant.helpers import entity_registry as er
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    from custom_components.bgg_sync.sensor import async_setup_entry
+    from custom_components.bgg_sync.const import DOMAIN
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"bgg_username": "test_user"},
+        options={CONF_IMPORT_COLLECTION: True},
+        entry_id="test_entry",
+    )
+    entry.add_to_hass(hass)
+
+    ent_reg = er.async_get(hass)
+    # 1. Pre-existing collection sensor with known real name in Entity Registry
+    ent_reg.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        "test_user_game_350000",
+        config_entry=entry,
+        original_name="Bear Mountain Camping Adventure",
+    )
+    # 2. Pre-existing tracked sensor stuck on "BGG Game 13" in Entity Registry
+    reg_catan = ent_reg.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        "test_user_game_13",
+        config_entry=entry,
+        original_name="BGG Game 13",
+    )
+
+    mock_coordinator_with_username.hass = hass
+    mock_coordinator_with_username.game_ids = [13]
+    mock_coordinator_with_username.game_data = {}
+    # Simulate startup during 403 outage: collection & game_details are empty
+    mock_coordinator_with_username.data = {
+        "collection": {},
+        "game_details": {},
+        "game_plays": {13: 0},
+    }
+
+    listeners = []
+
+    def capture_listener(cb):
+        listeners.append(cb)
+        return lambda: None
+
+    mock_coordinator_with_username.async_add_listener.side_effect = capture_listener
+    hass.data = {DOMAIN: {entry.entry_id: mock_coordinator_with_username}}
+    async_add_entities = MagicMock()
+
+    await async_setup_entry(hass, entry, async_add_entities)
+
+    added_list = async_add_entities.call_args[0][0]
+    game_sensors = {e.game_id: e for e in added_list if isinstance(e, BggGameSensor)}
+
+    # Both tracked game 13 and registry-recovered collection game 350000 exist
+    assert 13 in game_sensors
+    assert 350000 in game_sensors
+    # Game 350000 recovered its real name from the Entity Registry
+    assert game_sensors[350000].name == "Bear Mountain Camping Adventure"
+    # Game 13 was stuck on "BGG Game 13" and details are still empty
+    assert game_sensors[13].name == "BGG Game 13"
+
+    catan_sensor = game_sensors[13]
+    catan_sensor.hass = hass
+    catan_sensor.entity_id = reg_catan.entity_id
+
+    # Calling _sync_registry_name while details are empty is a no-op
+    catan_sensor._sync_registry_name()
+    assert ent_reg.async_get(reg_catan.entity_id).original_name == "BGG Game 13"
+
+    # Coordinator fetches real game details and discovers collection game 400000
+    mock_coordinator_with_username.data["game_details"] = {
+        13: {"name": "CATAN"},
+        400000: {"name": "New Collection Game"},
+    }
+    mock_coordinator_with_username.data["collection"] = {
+        350000: {"name": "Bear Mountain Camping Adventure"},
+        400000: {"name": "New Collection Game"},
+    }
+
+    # Test _sync_registry_name when entity_id is not set yet (early return branch)
+    catan_sensor.entity_id = None
+    catan_sensor._sync_registry_name()
+    assert catan_sensor.name == "CATAN"
+
+    # Restore entity_id and test async_added_to_hass + _handle_coordinator_update
+    catan_sensor.entity_id = reg_catan.entity_id
+    catan_sensor.async_write_ha_state = MagicMock()
+    await catan_sensor.async_added_to_hass()
+    catan_sensor._handle_coordinator_update()
+
+    # Verify Entity Registry original_name was healed from "BGG Game 13" to "CATAN"!
+    assert ent_reg.async_get(reg_catan.entity_id).original_name == "CATAN"
+
+    # Trigger dynamic collection listener to add game 400000
+    async_add_entities.reset_mock()
+    assert len(listeners) == 1
+    listeners[0]()
+    new_added = async_add_entities.call_args[0][0]
+    assert len(new_added) == 1
+    assert new_added[0].game_id == 400000
+    assert new_added[0].name == "New Collection Game"
